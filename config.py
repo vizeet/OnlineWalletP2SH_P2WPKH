@@ -1,22 +1,24 @@
 import json
 
 def init():
-        jsonobj = json.load(open('transfer_info.json', 'wt'))
+        jsonobj = {}
 
         jsonobj['Confirmation Target Block'] = int(input('Confirmation Target Block for fee estimation: '))
 
         jsonobj['Address Value Threshold'] = float(input('Address Value Threshold: '))
 
-        json.dump(jsonobj, open('transfer_info.json', 'wt'))
+        with open('transfer_info.json', 'wt') as f_transfer_info:
+                json.dump(jsonobj, f_transfer_info)
 
 # To be called offline
 def updateAddressConfig(jsonobj: dict, ldb_adapter):
+        print('aaaa jsonobj[In-use Addresses] = %s' % jsonobj['In-use Addresses'])
         inuse_addresses = jsonobj['In-use Addresses'].keys()
-        inuse_address_map = ldb_adapter_g.getRequiredTxnsInP2SH(inuse_addresses)
+        inuse_address_map = ldb_adapter.getRequiredTxnsInP2SH(inuse_addresses)
 
         if len(inuse_addresses_map) == 0:
                 addresses = jsonobj['Addresses']
-                inuse_address_map = ldb_adapter_g.getRequiredTxnsInP2SH(addresses)
+                inuse_address_map = ldb_adapter.getRequiredTxnsInP2SH(addresses)
 
         inuse_addresses_updated = inuse_address_map.keys()
 

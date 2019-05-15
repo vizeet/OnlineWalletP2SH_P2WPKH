@@ -1,8 +1,1 @@
-{
-        "Addresses": [],
-        "In-use Addresses": ["2MxsKZXkDiaJw5LbHyzNGBGksM42MF7GXMh"],
-        "Unused Addresses": ["2Mw8m7rnVefeSGkBTbb1JLmM1ZbbU6DAaTR", "2Mw8m7rnVefeSGkBTbb1JLmM1ZbbU6DAaTR"],
-        "Inputs": [{"txn": "", "address": "", "value": 50.00000000}],
-        "Raw txn": "0200000001aecf5c19f7d9c1cb83d193df7b5f351ef6636b68a62280d07d12c9a73b3554a70000000000ffffffff0200f902950000000017a9142aa793f2e0d059d12fbe77edd743eb341559f0f187c0ebff940000000017a91436f2c696e6f4f335d35d27aa537446194e8394638700000000",
-        "Confirmation Target Block": 6
-}
+{"Confirmation Target Block": 6, "Address Value Threshold": 0.1}

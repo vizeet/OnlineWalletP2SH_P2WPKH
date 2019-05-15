@@ -1,11 +1,12 @@
 import unittest
 import config
-import create_raw_transaction
+import create_raw_txn
 from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
 import shutil
 import os
-
-app = Flask(__name__)
+import requests
+import json
+from utility_adapters import leveldb_utils
 
 network_port_map = {
         'regtest': 18443,
@@ -29,7 +30,7 @@ class TestBitcoinWallet(unittest.TestCase):
         privkey1 = 'cUcSmC5p2Sr4mVNH2qcAS4YZqVk6tcxzwwvPVDNVfPVPGAsva53Q'
         addr2 = 'bcrt1qdscasv765km9t272ndyhn9vuvxx4t4atf4v26c'
 
-        def init_blockchain():
+        def init_blockchain(self):
                 global addr1, addr2
                 address_list = json.load(open('transfer_info.json', 'rt'))
                 self.rpc_user, self.rpc_password, self.rpc_connection = establishRPCConnection('regtest')
@@ -93,10 +94,12 @@ class TestBitcoinWallet(unittest.TestCase):
                 return fee_per_kb
 
         def setUp(self):
+                print('test started')
                 config.init()
-                res = request.post('http://localhost:11099/addresses', headers={"content-type":"application/json"})
-                data = res.data
-                jsonobj = json.loads(data)
+                header = {"content-type": "application/json", "Accept": "application/json"}
+                res = requests.get('http://localhost:11099/addresses', headers = header)
+                jsonobj = json.loads(res.text)
+                print('***jsonobj = %s' % jsonobj.keys())
 
                 ldb_adapter = leveldb_utils.LevelDBAdapter("regtest")
                 config.updateAddressConfig(jsonobj, ldb_adapter)
@@ -107,10 +110,13 @@ class TestBitcoinWallet(unittest.TestCase):
 
                 self.run_bitcoind_regtest()
 
-                init_blockchain():
+                self.init_blockchain()
 
         def test_1source_1target(self):
                 self.assertEqual( 3*4, 12)
 
         def tearDown(self):
                 self.process.kill()
+
+if __name__ == '__main__':
+        unittest.main()

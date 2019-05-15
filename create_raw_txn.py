@@ -2,13 +2,11 @@ from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
 import json
 from utility_adapters import hash_utils
 import tkinter
-from libtools import reduce
+from functools import reduce
 from copy import deepcopy
 from utility_adapters import leveldb_utils
 import optparse
 import config
-
-rpc_connection = AuthServiceProxy("http://%s:%s@127.0.0.1:18443"%(rpc_user, rpc_password))
 
 def updateUnusedAddresses():
         jsonobj = json.load(open('transfer_info.json', 'rt'))
@@ -112,9 +110,11 @@ def getCount(raw_txn: int):
                 return txn_size
 
 def estimatefee(raw_txn: bytes):
+        global rpc_connection_g
+
         conf_target = json.load(open('transfer_info.json', 'rt'))['Confirmation Target Block']
-        estimated_fee_rate = rpc_connection.estimatesmartfee(conf_target)
-        
+        estimated_fee_rate = rpc_connection_g.estimatesmartfee(conf_target)
+
         vbytes = calculateVBytes(raw_txn)
 
         estimated_fee = estimated_fee_rate * (vbytes / 1000)
@@ -146,10 +146,12 @@ def getChangeAddressFromInUse(change_value: float):
         return ret_address
 
 def setRawTransaction(inputs: list, outs: dict):
+        global rpc_connection_g
+
         tx_ins = [{'txid': inp['txid'], 'vout': inp['vout']} for inp in inputs]
 
         # first get raw transaction without change
-        raw_txn = rpc_connection.createrawtransaction(tx_ins, outs)
+        raw_txn = rpc_connection_g.createrawtransaction(tx_ins, outs)
 
         estimated_fee = estimatefee(raw_txn)
         target_value = getTargetValue(outs)
@@ -208,8 +210,6 @@ def getTargetAddresses():
                 tx_out.append(address_value)
 
 if __name__ == '__main__':
-        global rpc_user, rpc_password
-
         parser = optparse.OptionParser(usage="python3 create_raw_transaction.py -u <RPC Username> -p <RPC Password>")
         parser.add_option('-u', '--username', action='store', dest='user', help='Username to make RPC connection with bitcoind.')
         parser.add_option('-p', '--password', action='store', dest='password', help='Password to make RPC connection with bitcoind.')
@@ -220,6 +220,8 @@ if __name__ == '__main__':
 
         rpc_user = args.user
         rpc_password = args.password
+
+        rpc_connection_g = AuthServiceProxy("http://%s:%s@127.0.0.1:18443"%(rpc_user, rpc_password))
 
         tx_out = getTargetAddresses()
 
