@@ -86,3 +86,16 @@ def pubkey2addressLTC(pubkey: bytes):
         print('pkh = %s' % bytes.decode(binascii.hexlify(pkh)))
         address = pkh2addressLTC(pkh)
         return address
+
+def address2hash(address: str):
+        is_segwit = (address[0:3] == 'bc1' or address[0:3] == 'tb1' or address[0:5] == 'bcrt1')
+        if is_segwit:
+                hrp, h_list = bech32.bech32_decode(address)
+                witver, h_list = bech32.decode(hrp, address)
+                print('h_list = %s' % h_list)
+                h_b = bytes(h_list)
+        else:
+                #h_b = base58.base58checkDecode(privkey_wif)
+                print('IIIIII address = %s' % address)
+                h_b = base58.base58checkDecode(address)
+        return h_b
