@@ -62,15 +62,19 @@ class LevelDBAdapter:
                                 txn_hash_big_endian_b = key[1:33]
                                 txn_hash_little_endian = bytes.decode(binascii.hexlify(key[1:33][::-1]))
                                 jsonobj = self.ldb.getChainstateData(txn_hash_big_endian_b, out_index)
+                                #print('chainstate data = %s' % jsonobj)
                                 if jsonobj['script_type'] == 1 :
                                         size_hash = int(binascii.hexlify(jsonobj['script'][1:2]), 16)
                                         hash160_b = jsonobj['script'][2:2 + size_hash]
-                                        print('hash160 = %s' % bytes.decode(binascii.hexlify(hash160_b)))
+                                        print('script = %s' % bytes.decode(binascii.hexlify(jsonobj['script'])))
+                                        print('amount = %d' % jsonobj['amount'])
+                                        #print('hash160 = %s' % bytes.decode(binascii.hexlify(hash160_b)))
+                                        #print('Is coinbase = %r' % jsonobj['is_coinbase'] == True)
+                                        #print('In the list = %r' % hash160_b in required_hash160_b_list)
                                         recent_block_hash = self.ldb.getRecentBlockHash()
                                         recent_block_height = self.ldb.getBlockIndex(recent_block_hash)['height']
                                         block_height = jsonobj['height']
                                         block_depth = recent_block_height - block_height
-                                        print('block depth = %d' % block_depth)
                                         # coinbase transaction can be redeemed only after 100th confirmation
                                         if jsonobj['is_coinbase'] == True and block_depth < 100:
                                                 continue

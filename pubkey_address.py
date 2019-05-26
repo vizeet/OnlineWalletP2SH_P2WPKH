@@ -4,6 +4,7 @@ from utility_adapters.bitcoin_secp256k1 import P
 import binascii
 import hashlib
 from utility_adapters import hash_utils
+from utils import base58
 from ecdsa import SigningKey, SECP256k1
 
 # uncompressed public key has b'\x04' prefix
