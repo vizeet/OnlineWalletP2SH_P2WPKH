@@ -1,10 +1,10 @@
-from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
+#from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
 import json
 from utility_adapters import hash_utils
 import tkinter
 from functools import reduce
 from copy import deepcopy
-from utility_adapters import leveldb_utils
+#from utility_adapters import leveldb_utils
 import optparse
 import config
 import binascii
@@ -233,7 +233,7 @@ class RawTxn:
                 outs[change_address] = change_value
                 raw_txn = rpc_connection.createrawtransaction(tx_ins, outs)
 
-                with open(transfer_info_filepath, 'wt') as transfer_info_f
+                with open(transfer_info_filepath, 'wt') as transfer_info_f:
                         jsonobj['Raw txn'] = raw_txn
                         jsonobj['Inputs'] = inputs
 

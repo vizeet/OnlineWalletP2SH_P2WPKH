@@ -1,6 +1,7 @@
 import json
 import create_raw_txn
 from optparse import OptionParser
+from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
 
 network_port_map_g = {
         'regtest': 18443,
@@ -22,7 +23,7 @@ class Wallet:
                 self.network = network
                 self.transfer_info_filepath = datadir + '/' + transfer_info_map_g[network]
 
-        def validateAddresses(self)
+        def validateAddresses(self):
                 with open(self.transfer_info_filepath, 'rt') as transfer_file_f:
                         jsonobj = json.load(transfer_file_f)
 
@@ -107,10 +108,12 @@ if __name__ == '__main__':
 
         if options.test:
                 network = 'regtest'
+                datadir = '/tmp/share'
         else:
                 with open('../config/hd_wallet.conf', 'rt') as conf_f:
-                        network = json.load(conf_f)['network']
-                        datadir = json.load(conf_f)['datadir']
+                        jsonobj = json.load(conf_f)
+                network = jsonobj['network']
+                datadir = jsonobj['datadir']
 
         print('1. Validate Addresses')
         print('2. Create Raw Transaction')
