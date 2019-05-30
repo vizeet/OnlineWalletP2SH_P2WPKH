@@ -2,6 +2,9 @@ import json
 import create_raw_txn
 from optparse import OptionParser
 from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
+import sys
+import requests
+from copy import copy
 
 network_port_map_g = {
         'regtest': 18443,
@@ -23,81 +26,113 @@ class Wallet:
                 self.network = network
                 self.transfer_info_filepath = datadir + '/' + transfer_info_map_g[network]
 
-        def validateAddresses(self):
-                with open(self.transfer_info_filepath, 'rt') as transfer_file_f:
-                        jsonobj = json.load(transfer_file_f)
+        def isAddressUnused(self, address: str):
+                res = requests.get('https://blockchain.info/rawaddr/' + address)
+                jsonobj = json.loads(res.text)
+                return (jsonobj['total_received'] == 0)
 
+        def setUnusedAddresses(self):
+                self.unused_list = [address for address in self.jsonobj['Addresses'] if self.isAddressUnused(address) == True]
+
+        def setUnusedAddressesTest(self):
+                unspent_list = self.rpc_connection.listunspent()
+                if len(unspent_list) > 0:
+                        inuse_addresses = [unspent['address'] for unspent in unspent_list]
+                        index = 0
+                        for inuse_address in inuse_addresses:
+                                new_index = self.jsonobj['Addresses'].index(inuse_address)
+                                index = new_index if new_index > index else index
+                        self.unused_list = copy(self.jsonobj['Addresses'][index + 1:])
+                else:
+                        self.unused_list = copy(self.jsonobj['Addresses'])
+
+                print('unused list = %s' % self.unused_list)
+
+        def getTargetAddresses(self):
+                if network == 'regtest':
+                        self.setUnusedAddressesTest()
+                else:
+                        self.setUnusedAddresses()
+
+                out_count = int(input('Enter Number of Target Addresses: '))
+
+                tx_out = []
+
+                unused_index = 0
+
+                for i in range(out_count):
+                        address_value = {}
+                        address = self.unused_list[unused_index]
+                        use_address = ((input('Use Address %s: Y/n? ' % address) or 'Y').lower() == 'y')
+                        if use_address ==False:
+                                address = input('Enter Target Address: ')
+                        else:
+                                unused_index += 1
+                        value = float(input('Enter Bitcoins: '))
+                        address_value[address] = value
+
+                        tx_out.append(address_value)
+
+                change_address = self.unused_list[unused_index]
+                return tx_out, change_address
+
+        def validateAddresses(self):
                 address_valid_map = {}
-                for address in jsonobj['Addresses']:
+                for address in self.jsonobj['Addresses']:
                        address_valid_map[address] = self.rpc_connection.validateaddress(address)['isvalid']
                 return address_valid_map
 
-        def setNewAddresses(addresses: list):
-                existing_addresses = self.rpc_connection.getaddressesbyaccount('')
+        def setNewAddresses(self, addresses: list):
+                existing_addresses = self.rpc_connection.getaddressesbylabel('wallet')
                 new_addresses = set(addresses) - set(existing_addresses)
 
                 return new_addresses
 
-        def registerAddresses(addresses: list):
-                new_addresses = setNewAddresses(addresses)
+        def registerAddresses(self, addresses: list):
+                new_addresses = self.setNewAddresses(addresses)
 
                 s = []
-                for address in self.new_addresses:
-                        i = {'scriptPubKey': {'address': address}, 'timestamp': 0}
+                for address in new_addresses:
+                        i = {'scriptPubKey': {'address': address}, 'timestamp': 0, 'label': 'wallet', 'watchonly': True}
                         s.append(i)
 
                 self.rpc_connection.importmulti(s)
 
                 return new_addresses
 
-        def populateInuseAddressMap(unspent_list: list):
-                inuse_address_map = {}
-                for unspent in unspent_list:
-                        address = unspent['address']
-                        if address not in inuse_address_map:
-                                inuse_address_map[address] = {}
-                        txid = unspent['txid']
-                        if txid not in inuse_address_map[address]:
-                                inuse_address_map[address][txid] = []
-                        vout = unspent['vout']
-                        amount = unspent['amount']
-                        self.inuse_address_map[address][txid].append({'vout': vout, 'amount': amount})
+        def getInputs(self, amount: float):
+                if len(self.inuse_address_value_map) == 0:
+                        print('Inuse addresses are 0')
+                        self.setInuseAddressValueMap()
 
-        def updateAddresses():
-                with open(self.transfer_info_filepath, 'rt') as transfer_file_f:
-                        jsonobj = json.load(transfer_file_f)
+                inputs = []
+                value = 0
+                for address, address_value in self.inuse_address_value_map.items():
+                        address_inputs = getInputsForAddress(address)
+                        value += address_value
+                        inputs.extend(address_inputs)
 
-                unspent_list = self.rpc_connections.listunspent()
-                self.populateInuseAddressMap(unspent_list)
+                        if value >= amount:
+                                break
 
-                inuse_addresses = [unspent['address'] for unspent in unspent_list]
+                print('inputs = %s' % inputs)
+                return inputs
 
-                new_used_addresses = set(jsonobj['In-use Addresses']) - set(inuse_addresses)
+        def createRawTxn(self, fee_rate):
+                print('transfer_info_filepath = %s' % self.transfer_info_filepath)
+                sys.stdout.flush()
 
-                jsonobj['In-use Addresses'] = inuse_addresses
+                self.registerAddresses(self.jsonobj['Addresses'])
 
-                jsonobj['Used Addresses'] = list(set(jsonobj['Used Addresses']).union(new_used_addresses))
-
-        def createRawTxn(self):
-                with open(self.transfer_info_filepath, 'rt') as transfer_file_f:
-                        jsonobj = json.load(transfer_file_f)
-
-                if jsonobj['Address Flag'] == 'modified':
-                        new_addresses = self.registerAddresses(jsonobj['Addresses'])
-                        jsonobj['Unused Addresses'].extend(new_addresses)
-                        jsonobj['Address Flag'] = 'registered'
-                self.updateAddresses()
-
-                raw_txn = create_raw_txn.RawTxn(self.network, self.rpc_connection, self.transfer_info_filepath)
-                fee_rate = 0.00005
-                txout = raw_txn.getTargetAddresses()
-                raw_txn.setRawTxnFromOuts(txout, fee_rate=fee_rate)
+                raw_txn = create_raw_txn.RawTxn(self.rpc_connection, self.transfer_info_filepath)
+                txout, change_address = self.getTargetAddresses()
+                self.jsonobj = raw_txn.getRawTxnFromOuts(txout, change_address, fee_rate, self.jsonobj)
 
         def publishSignedTxn(self):
-                with open(self.transfer_info_filepath, 'rt') as transfer_file_f:
-                        jsonobj = json.load(transfer_file_f)
+                return self.rpc_connection.sendrawtransaction(self.jsonobj['Signed Txn'])
 
-                return self.rpc_connection.sendrawtransaction(jsonobj['Signed Txn'])
+        def getFeeRate(self, conf_target_block: float):
+                return self.rpc_connection.estimatesmartfee(conf_target_block)['feerate']
 
 if __name__ == '__main__':
         parser = OptionParser()
@@ -108,7 +143,7 @@ if __name__ == '__main__':
 
         if options.test:
                 network = 'regtest'
-                datadir = '/tmp/share'
+                datadir = '/home/online/wallet'
         else:
                 with open('../config/hd_wallet.conf', 'rt') as conf_f:
                         jsonobj = json.load(conf_f)
@@ -123,11 +158,29 @@ if __name__ == '__main__':
         wallet = Wallet(network, datadir)
 
         if choice == 1:
+                with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
+                        wallet.jsonobj = json.load(transfer_file_f)
+
                 address_valid_map = wallet.validateAddresses()
                 print(address_valid_map)
         elif choice == 2:
-                wallet.createRawTxn()
+                if network == 'regtest':
+                        fee_rate = 0.00005
+                else:
+                        conf_target_block = int(input('Confirmation Target Block for fee estimation: '))
+                        fee_rate = wallet.getFeeRate(conf_target_block)
+
+                with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
+                        wallet.jsonobj = json.load(transfer_file_f)
+
+                wallet.createRawTxn(fee_rate)
+
+                with open(wallet.transfer_info_filepath, 'wt') as transfer_file_f:
+                        json.dump(wallet.jsonobj, transfer_file_f)
         elif choice == 3:
+                with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
+                        wallet.jsonobj = json.load(transfer_file_f)
+
                 status = wallet.publishSignedTxn()
                 print(status)
         else:
