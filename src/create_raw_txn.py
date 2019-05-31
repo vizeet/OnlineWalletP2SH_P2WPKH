@@ -167,7 +167,7 @@ class RawTxn:
 
                 # if change_value is not 0 then estimated_fee and change_value are wrong
                 if change_value == 0:
-                        jsonobj['Raw txn'] = raw_txn
+                        jsonobj['Raw Txn'] = raw_txn
                         jsonobj['Inputs'] = inputs
 
                         return jsonobj
@@ -196,7 +196,7 @@ class RawTxn:
                 raw_txn = self.rpc_connection.createrawtransaction(tx_ins, new_outs)
                 print('raw txn = %s' % raw_txn)
 
-                jsonobj['Raw txn'] = raw_txn
+                jsonobj['Raw Txn'] = raw_txn
                 jsonobj['Inputs'] = inputs
 
                 return jsonobj

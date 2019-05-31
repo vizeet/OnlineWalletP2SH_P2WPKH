@@ -5,6 +5,7 @@ from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
 import sys
 import requests
 from copy import copy
+from pprint import pprint
 
 network_port_map_g = {
         'regtest': 18443,
@@ -40,8 +41,9 @@ class Wallet:
                         inuse_addresses = [unspent['address'] for unspent in unspent_list]
                         index = 0
                         for inuse_address in inuse_addresses:
-                                new_index = self.jsonobj['Addresses'].index(inuse_address)
-                                index = new_index if new_index > index else index
+                                if inuse_address in self.jsonobj['Addresses']:
+                                        new_index = self.jsonobj['Addresses'].index(inuse_address)
+                                        index = new_index if new_index > index else index
                         self.unused_list = copy(self.jsonobj['Addresses'][index + 1:])
                 else:
                         self.unused_list = copy(self.jsonobj['Addresses'])
@@ -134,6 +136,9 @@ class Wallet:
         def getFeeRate(self, conf_target_block: float):
                 return self.rpc_connection.estimatesmartfee(conf_target_block)['feerate']
 
+        def decodeSignedTransaction(self):
+                return self.rpc_connection.decoderawtransaction(self.jsonobj['Signed Txn'])
+
 if __name__ == '__main__':
         parser = OptionParser()
         parser.add_option("-t", "--test",
@@ -152,7 +157,8 @@ if __name__ == '__main__':
 
         print('1. Validate Addresses')
         print('2. Create Raw Transaction')
-        print('3. Publish Signed Transaction')
+        print('3. Decode Signed Transaction')
+        print('4. Publish Signed Transaction')
         choice = int(input('Selection: '))
 
         wallet = Wallet(network, datadir)
@@ -178,6 +184,13 @@ if __name__ == '__main__':
                 with open(wallet.transfer_info_filepath, 'wt') as transfer_file_f:
                         json.dump(wallet.jsonobj, transfer_file_f)
         elif choice == 3:
+                with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
+                        wallet.jsonobj = json.load(transfer_file_f)
+
+                decoded_txn = wallet.decodeSignedTransaction()
+                pprint(decoded_txn)
+
+        elif choice == 4:
                 with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
                         wallet.jsonobj = json.load(transfer_file_f)
 
