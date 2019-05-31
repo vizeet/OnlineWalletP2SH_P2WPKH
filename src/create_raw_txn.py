@@ -3,6 +3,7 @@ from functools import reduce
 from copy import deepcopy
 import optparse
 import binascii
+from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
 
 inuse_address_value_map_g = {}
 
@@ -78,10 +79,14 @@ def getTargetValue(tx_out: list):
         return target_value
 
 class RawTxn:
-        def __init__(self, rpc_connection, transfer_info_filepath: str):
+        def __init__(self, rpc_user, rpc_password, rpc_port, transfer_info_filepath: str):
                 global network_port_map_g
-                self.rpc_connection = rpc_connection
+                #self.rpc_connection = rpc_connection
                 self.transfer_info_filepath = transfer_info_filepath
+                print('rpc_user = %s' % rpc_user)
+                print('rpc_password = %s' % rpc_password)
+                print('rpc_port = %d' % rpc_port)
+                self.rpc_connection = AuthServiceProxy("http://%s:%s@127.0.0.1:%d" % (rpc_user, rpc_password, rpc_port))
 
         def getInputsForAddress(self, address: str):
                 inputs = []
@@ -112,6 +117,7 @@ class RawTxn:
                 print('********** target value = %f' % amount)
 
                 if len(inuse_address_value_map_g) == 0:
+                        block_count = self.rpc_connection.getblockcount()
                         unspent_list = self.rpc_connection.listunspent()
                         self.setInuseAddressMap(unspent_list)
 

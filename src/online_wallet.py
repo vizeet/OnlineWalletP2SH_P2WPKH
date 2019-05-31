@@ -21,9 +21,10 @@ class Wallet:
         def __init__(self, network: str, datadir: str):
                 global network_port_map_g, transfer_info_map_g
 
-                rpc_user = input('RPC Username: ')
-                rpc_password = input('RPC Password: ')
-                self.rpc_connection = AuthServiceProxy("http://%s:%s@127.0.0.1:%d" %(rpc_user, rpc_password, network_port_map_g[network]))
+                self.rpc_user = input('RPC Username: ')
+                self.rpc_password = input('RPC Password: ')
+                self.rpc_port = network_port_map_g[network]
+                self.rpc_connection = AuthServiceProxy("http://%s:%s@127.0.0.1:%d" %(self.rpc_user, self.rpc_password, self.rpc_port))
                 self.network = network
                 self.transfer_info_filepath = datadir + '/' + transfer_info_map_g[network]
 
@@ -49,6 +50,16 @@ class Wallet:
                         self.unused_list = copy(self.jsonobj['Addresses'])
 
                 print('unused list = %s' % self.unused_list)
+
+        def getNextAddress(self):
+                if network == 'regtest':
+                        self.setUnusedAddressesTest()
+                else:
+                        self.setUnusedAddresses()
+
+                address = self.unused_list[0]
+
+                return address
 
         def getTargetAddresses(self):
                 if network == 'regtest':
@@ -85,8 +96,13 @@ class Wallet:
                 return address_valid_map
 
         def setNewAddresses(self, addresses: list):
-                existing_addresses = self.rpc_connection.getaddressesbylabel('wallet')
+                label_list = self.rpc_connection.listlabels()
+                existing_addresses = []
+
+                if 'wallet' in label_list:
+                        existing_addresses = self.rpc_connection.getaddressesbylabel('wallet')
                 new_addresses = set(addresses) - set(existing_addresses)
+                print('new_addresses = %s' % new_addresses)
 
                 return new_addresses
 
@@ -98,7 +114,8 @@ class Wallet:
                         i = {'scriptPubKey': {'address': address}, 'timestamp': 0, 'label': 'wallet', 'watchonly': True}
                         s.append(i)
 
-                self.rpc_connection.importmulti(s)
+                if len(s) > 0:
+                        self.rpc_connection.importmulti(s)
 
                 return new_addresses
 
@@ -126,7 +143,7 @@ class Wallet:
 
                 self.registerAddresses(self.jsonobj['Addresses'])
 
-                raw_txn = create_raw_txn.RawTxn(self.rpc_connection, self.transfer_info_filepath)
+                raw_txn = create_raw_txn.RawTxn(self.rpc_user, self.rpc_password, self.rpc_port, self.transfer_info_filepath)
                 txout, change_address = self.getTargetAddresses()
                 self.jsonobj = raw_txn.getRawTxnFromOuts(txout, change_address, fee_rate, self.jsonobj)
 
@@ -156,9 +173,10 @@ if __name__ == '__main__':
                 datadir = jsonobj['datadir']
 
         print('1. Validate Addresses')
-        print('2. Create Raw Transaction')
-        print('3. Decode Signed Transaction')
-        print('4. Publish Signed Transaction')
+        print('2. Get Next Address')
+        print('3. Create Raw Transaction')
+        print('4. Decode Signed Transaction')
+        print('5. Publish Signed Transaction')
         choice = int(input('Selection: '))
 
         wallet = Wallet(network, datadir)
@@ -170,11 +188,17 @@ if __name__ == '__main__':
                 address_valid_map = wallet.validateAddresses()
                 print(address_valid_map)
         elif choice == 2:
+                with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
+                        wallet.jsonobj = json.load(transfer_file_f)
+                address = wallet.getNextAddress()
+                print('Use Address: %s' % address)
+        elif choice == 3:
                 if network == 'regtest':
                         fee_rate = 0.00005
                 else:
                         conf_target_block = int(input('Confirmation Target Block for fee estimation: '))
-                        fee_rate = wallet.getFeeRate(conf_target_block)
+                        fee_rate = float(wallet.getFeeRate(conf_target_block))
+                        print('fee_rate = %f' % fee_rate)
 
                 with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
                         wallet.jsonobj = json.load(transfer_file_f)
@@ -183,14 +207,14 @@ if __name__ == '__main__':
 
                 with open(wallet.transfer_info_filepath, 'wt') as transfer_file_f:
                         json.dump(wallet.jsonobj, transfer_file_f)
-        elif choice == 3:
+        elif choice == 4:
                 with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
                         wallet.jsonobj = json.load(transfer_file_f)
 
                 decoded_txn = wallet.decodeSignedTransaction()
                 pprint(decoded_txn)
 
-        elif choice == 4:
+        elif choice == 5:
                 with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
                         wallet.jsonobj = json.load(transfer_file_f)
 
