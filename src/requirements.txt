@@ -1,0 +1,4 @@
+python-bitcoinrpc==1.0
+ecdsa==0.13.2
+pygame==1.9.6
+
