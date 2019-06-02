@@ -227,6 +227,8 @@ if __name__ == '__main__':
                 with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
                         wallet.jsonobj = json.load(transfer_file_f)
 
+                wallet.jsonobj['Fee Rate'] = fee_rate
+
                 wallet.createRawTxn(fee_rate)
 
                 with open(wallet.transfer_info_filepath, 'wt') as transfer_file_f:
