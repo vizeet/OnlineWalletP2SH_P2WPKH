@@ -160,6 +160,10 @@ class RawTxn:
                         if value >= amount:
                                 break
 
+                if value < amount:
+                        print('Error: Insufficient Balance')
+                        return None
+
                 print('inputs = %s' % inputs)
                 return inputs
 

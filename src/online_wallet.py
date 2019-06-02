@@ -143,24 +143,27 @@ class Wallet:
 
                 return new_addresses
 
-        def getInputs(self, amount: float):
-                if len(self.inuse_address_value_map) == 0:
-                        print('Inuse addresses are 0')
-                        self.setInuseAddressValueMap()
-
-                inputs = []
-                value = 0
-                for address, address_value in self.inuse_address_value_map.items():
-                        address_inputs = getInputsForAddress(address)
-                        value += address_value
-                        inputs.extend(address_inputs)
-
-                        if value >= amount:
-                                break
-
-                print('inputs = %s' % inputs)
-                return inputs
-
+#        def getInputs(self, amount: float):
+#                if len(self.inuse_address_value_map) == 0:
+#                        print('Inuse addresses are 0')
+#                        self.setInuseAddressValueMap()
+#
+#                inputs = []
+#                value = 0
+#                for address, address_value in self.inuse_address_value_map.items():
+#                        address_inputs = getInputsForAddress(address)
+#                        value += address_value
+#                        inputs.extend(address_inputs)
+#
+#                        if value >= amount:
+#                                break
+#
+#                if value < amount:
+#                        print('Insufficient Balance')
+#                        return inputs
+#                print('inputs = %s' % inputs)
+#                return inputs
+#
         def createRawTxn(self, fee_rate):
                 print('transfer_info_filepath = %s' % self.transfer_info_filepath)
                 sys.stdout.flush()
