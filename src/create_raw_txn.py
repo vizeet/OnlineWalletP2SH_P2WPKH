@@ -167,6 +167,18 @@ class RawTxn:
                 print('inputs = %s' % inputs)
                 return inputs
 
+        def getInputsForAddressList(self, address_list: list):
+                inputs = []
+                for address in address_list:
+                        address_inputs = self.getInputsForAddress(address)
+                        inputs.extend(address_inputs)
+
+                print('inputs = %s' % inputs)
+                return inputs
+
+        def getAmountFromInputs(self, inputs: list):
+                reduce(lambda x, y: x + y, [inp[amount] for inp in inputs])
+
         def estimatefee(self, raw_txn: bytes, fee_rate):
 
                 vbytes = calculateVBytes(raw_txn)
@@ -239,4 +251,34 @@ class RawTxn:
                 target_value = getTargetValue(txout)
                 inputs = self.getInputs(target_value)
                 return self.getRawTransaction(inputs, txout, change_address, fee_rate, jsonobj)
+
+        def getRawTxnToDivideFunds(self, input_addresses: list, out_addresses: list, fee_rate: float, jsonobj: dict):
+                print('fee_rate = %f' % fee_rate)
+
+                inputs = self.getInputsForAddressList(self, input_addresses)
+                input_value = getInputValue(inputs)
+
+                each_out_value = round(input_value / len(out_addresses), 8)
+
+                outs = dict([(address, each_out_value) for address in out_addresses])
+
+                tx_ins = [{'txid': inp['txid'], 'vout': inp['vout']} for inp in inputs]
+
+                # first get raw transaction without change
+                print('111111111: tx_ins = %s, outs = %s' % (tx_ins, outs))
+                raw_txn = self.rpc_connection.createrawtransaction(tx_ins, outs)
+
+                estimated_fee = self.estimatefee(binascii.unhexlify(raw_txn), fee_rate)
+                each_out_value = round((input_value - estimated_fee) / len(out_addresses), 8)
+                outs = dict([(address, each_out_value) for address in out_addresses])
+
+                # second get raw transaction without change
+                print('22222222: tx_ins = %s, outs = %s' % (tx_ins, outs))
+                raw_txn = self.rpc_connection.createrawtransaction(tx_ins, outs)
+                print('raw txn = %s' % raw_txn)
+
+                jsonobj['Raw Txn'] = raw_txn
+                jsonobj['Inputs'] = inputs
+
+                return jsonobj
 

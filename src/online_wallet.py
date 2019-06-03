@@ -113,6 +113,33 @@ class Wallet:
                 change_address = self.unused_list[unused_index]
                 return tx_out, change_address
 
+        def getSourceTargetAddresses(self):
+                if network == 'regtest':
+                        self.setUnusedAddressesTest()
+                else:
+                        self.setUnusedAddresses()
+
+                out_count = int(input('Enter Number of Input Addresses: '))
+
+                input_addresses = []
+
+                for i in range(out_count):
+                        address_value = {}
+                        address = input('Enter Input Address: ')
+
+                        input_addresses.append(address_value)
+
+                out_count = int(input('Enter Number of Target Addresses: '))
+
+                out_addresses = []
+
+                for i in range(out_count):
+                        address = input('Enter Target Address: ')
+
+                        out_addresses.append(address)
+
+                return input_addresses, out_addresses
+
         def validateAddresses(self):
                 address_valid_map = {}
                 for address in self.jsonobj['Addresses']:
@@ -174,6 +201,16 @@ class Wallet:
                 txout, change_address = self.getTargetAddresses()
                 self.jsonobj = raw_txn.getRawTxnFromOuts(txout, change_address, fee_rate, self.jsonobj)
 
+        def createRawTxnToDivideFunds(self, fee_rate):
+                print('transfer_info_filepath = %s' % self.transfer_info_filepath)
+                sys.stdout.flush()
+
+                self.registerAddresses(self.jsonobj['Addresses'])
+
+                raw_txn = create_raw_txn.RawTxn(self.rpc_user, self.rpc_password, self.rpc_port, self.transfer_info_filepath)
+                input_addresses, out_addresses = self.getSourceTargetAddresses()
+                self.jsonobj = raw_txn.getRawTxnToDivideFunds(input_addresses, out_addresses, fee_rate, self.jsonobj)
+
         def publishSignedTxn(self):
                 return self.rpc_connection.sendrawtransaction(self.jsonobj['Signed Txn'])
 
@@ -202,8 +239,9 @@ if __name__ == '__main__':
         print('1. Validate Addresses')
         print('2. Get Next Address')
         print('3. Create Raw Transaction')
-        print('4. Decode Signed Transaction')
-        print('5. Publish Signed Transaction')
+        print('4. Create Raw Transaction to Divide Funds')
+        print('5. Decode Signed Transaction')
+        print('6. Publish Signed Transaction')
         choice = int(input('Selection: '))
 
         wallet = Wallet(network, datadir)
@@ -230,6 +268,8 @@ if __name__ == '__main__':
                 with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
                         wallet.jsonobj = json.load(transfer_file_f)
 
+                fee_rate = (input('change fee_rate (%f btc/kb): ' % fee_rate) or fee_rate)
+                print('fee_rate = %f' % fee_rate)
                 wallet.jsonobj['Fee Rate'] = fee_rate
 
                 wallet.createRawTxn(fee_rate)
@@ -237,13 +277,32 @@ if __name__ == '__main__':
                 with open(wallet.transfer_info_filepath, 'wt') as transfer_file_f:
                         json.dump(wallet.jsonobj, transfer_file_f)
         elif choice == 4:
+                if network == 'regtest':
+                        fee_rate = 0.00005
+                else:
+                        conf_target_block = int(input('Confirmation Target Block for fee estimation: '))
+                        fee_rate = float(wallet.getFeeRate(conf_target_block))
+                        print('fee_rate = %f' % fee_rate)
+
+                with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
+                        wallet.jsonobj = json.load(transfer_file_f)
+
+                fee_rate = (input('change fee_rate (%f btc/kb): ' % fee_rate) or fee_rate)
+                print('fee_rate = %f' % fee_rate)
+                wallet.jsonobj['Fee Rate'] = fee_rate
+
+                wallet.createRawTxnToDivideFunds(fee_rate)
+
+                with open(wallet.transfer_info_filepath, 'wt') as transfer_file_f:
+                        json.dump(wallet.jsonobj, transfer_file_f)
+        elif choice == 5:
                 with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
                         wallet.jsonobj = json.load(transfer_file_f)
 
                 decoded_txn = wallet.decodeSignedTransaction()
                 pprint(decoded_txn)
 
-        elif choice == 5:
+        elif choice == 6:
                 with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
                         wallet.jsonobj = json.load(transfer_file_f)
 
