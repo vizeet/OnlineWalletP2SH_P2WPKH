@@ -189,7 +189,7 @@ class RawTxn:
         def getAmountFromInputs(self, inputs: list):
                 reduce(lambda x, y: x + y, [inp[amount] for inp in inputs])
 
-        def estimatefee(self, raw_txn: bytes, fee_rate):
+        def estimatefee(self, raw_txn: bytes, fee_rate: float):
 
                 vbytes = calculateVBytes(raw_txn)
 

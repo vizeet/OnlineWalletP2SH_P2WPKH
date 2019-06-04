@@ -291,6 +291,7 @@ if __name__ == '__main__':
                         wallet.jsonobj = json.load(transfer_file_f)
 
                 fee_rate = float(input('change fee_rate (%f btc/kb): ' % fee_rate) or '%f' % fee_rate)
+                fee_rate = round(fee_rate, 8)
                 print('fee_rate = %f' % fee_rate)
                 wallet.jsonobj['Fee Rate'] = fee_rate
 
