@@ -73,19 +73,26 @@ python2 online_wallet.py [-t]
 -t is for test mode.
 Select option 3.
 
-7.  Decode Signed Transaction to check inputs and outputs of transactions are as expected:
+6. Create Raw Transaction to Divide Funds
 ```bash
 python2 online_wallet.py [-t]
 ```
 -t is for test mode.
-Select option 4.
+Select option 4. This helps in dividing funds at an address to multiple addresses.
+
+7. Decode Signed Transaction to check inputs and outputs of transactions are as expected:
+```bash
+python2 online_wallet.py [-t]
+```
+-t is for test mode.
+Select option 5.
 
 8.  Publish Signed Transaction to push it into network:
 ```bash
 python2 online_wallet.py [-t]
 ```
 -t is for test mode.
-Select option 5.
+Select option 6.
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
