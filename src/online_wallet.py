@@ -124,19 +124,22 @@ class Wallet:
                 input_addresses = []
 
                 for i in range(out_count):
-                        address_value = {}
                         address = input('Enter Input Address: ')
 
-                        input_addresses.append(address_value)
+                        input_addresses.append(address)
 
                 out_count = int(input('Enter Number of Target Addresses: '))
 
                 out_addresses = []
 
                 for i in range(out_count):
-                        address = input('Enter Target Address: ')
+                        #address = input('Enter Target Address: ')
+                        address = self.unused_list[i]
+                        #use_address = ((input('Use Address %s: Y/n? ' % address) or 'Y').lower() == 'y')
 
                         out_addresses.append(address)
+
+                print('out_addresses = %s' % out_addresses)
 
                 return input_addresses, out_addresses
 
@@ -268,7 +271,7 @@ if __name__ == '__main__':
                 with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
                         wallet.jsonobj = json.load(transfer_file_f)
 
-                fee_rate = (input('change fee_rate (%f btc/kb): ' % fee_rate) or fee_rate)
+                fee_rate = float(input('change fee_rate (%f btc/kb): ' % fee_rate) or '%f' % fee_rate)
                 print('fee_rate = %f' % fee_rate)
                 wallet.jsonobj['Fee Rate'] = fee_rate
 
@@ -287,7 +290,7 @@ if __name__ == '__main__':
                 with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
                         wallet.jsonobj = json.load(transfer_file_f)
 
-                fee_rate = (input('change fee_rate (%f btc/kb): ' % fee_rate) or fee_rate)
+                fee_rate = float(input('change fee_rate (%f btc/kb): ' % fee_rate) or '%f' % fee_rate)
                 print('fee_rate = %f' % fee_rate)
                 wallet.jsonobj['Fee Rate'] = fee_rate
 

@@ -111,10 +111,21 @@ class RawTxn:
                 print('rpc_password = %s' % rpc_password)
                 print('rpc_port = %d' % rpc_port)
                 self.rpc_connection = AuthServiceProxy("http://%s:%s@127.0.0.1:%d" % (rpc_user, rpc_password, rpc_port))
+                self.inuseAddressMap = None
 
         def getInputsForAddress(self, address: str):
                 inputs = []
+
+                print('address = %s' % address)
+
+                if self.inuseAddressMap == None:
+                        unspent_list = self.rpc_connection.listunspent()
+                        self.setInuseAddressMap(unspent_list)
+
+                print('inuse_address_map[%s] = %s' % (address, self.inuse_address_map[address]))
+
                 for txn in self.inuse_address_map[address]:
+                        print('txn = %s' % txn)
                         for vout_amount_map in self.inuse_address_map[address][txn]:
                                 value = vout_amount_map['amount']
                                 out_index = vout_amount_map['vout']
@@ -141,7 +152,6 @@ class RawTxn:
                 print('********** target value = %f' % amount)
 
                 if len(inuse_address_value_map_g) == 0:
-                        block_count = self.rpc_connection.getblockcount()
                         unspent_list = self.rpc_connection.listunspent()
                         self.setInuseAddressMap(unspent_list)
 
@@ -255,7 +265,7 @@ class RawTxn:
         def getRawTxnToDivideFunds(self, input_addresses: list, out_addresses: list, fee_rate: float, jsonobj: dict):
                 print('fee_rate = %f' % fee_rate)
 
-                inputs = self.getInputsForAddressList(self, input_addresses)
+                inputs = self.getInputsForAddressList(input_addresses)
                 input_value = getInputValue(inputs)
 
                 each_out_value = round(input_value / len(out_addresses), 8)
