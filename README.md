@@ -73,14 +73,14 @@ python2 online_wallet.py [-t]
 -t is for test mode.
 Select option 3.
 
-6.  Decode Signed Transaction to check inputs and outputs of transactions are as expected:
+7.  Decode Signed Transaction to check inputs and outputs of transactions are as expected:
 ```bash
 python2 online_wallet.py [-t]
 ```
 -t is for test mode.
 Select option 4.
 
-7.  Publish Signed Transaction to push it into network:
+8.  Publish Signed Transaction to push it into network:
 ```bash
 python2 online_wallet.py [-t]
 ```

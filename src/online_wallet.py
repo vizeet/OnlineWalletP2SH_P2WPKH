@@ -75,15 +75,16 @@ class Wallet:
 
                 print('unused list = %s' % self.unused_list)
 
-        def getNextAddress(self):
+        def getNextAddresses(self):
                 if network == 'regtest':
                         self.setUnusedAddressesTest()
                 else:
                         self.setUnusedAddresses()
 
-                address = self.unused_list[0]
+                count = int(input('Enter Number of Unused Addresses: '))
+                addresses = self.unused_list[0: count]
 
-                return address
+                return addresses
 
         def getTargetAddresses(self):
                 if network == 'regtest':
@@ -240,7 +241,7 @@ if __name__ == '__main__':
                 datadir = jsonobj['datadir']
 
         print('1. Validate Addresses')
-        print('2. Get Next Address')
+        print('2. Get Next Addresses')
         print('3. Create Raw Transaction')
         print('4. Create Raw Transaction to Divide Funds')
         print('5. Decode Signed Transaction')
@@ -258,8 +259,8 @@ if __name__ == '__main__':
         elif choice == 2:
                 with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
                         wallet.jsonobj = json.load(transfer_file_f)
-                address = wallet.getNextAddress()
-                print('Use Address: %s' % address)
+                addresses = wallet.getNextAddresses()
+                print('Use Addresses: %s' % addresses)
         elif choice == 3:
                 if network == 'regtest':
                         fee_rate = 0.00005
@@ -272,8 +273,9 @@ if __name__ == '__main__':
                         wallet.jsonobj = json.load(transfer_file_f)
 
                 fee_rate = float(input('change fee_rate (%f btc/kb): ' % fee_rate) or '%f' % fee_rate)
-                print('fee_rate = %f' % fee_rate)
-                wallet.jsonobj['Fee Rate'] = fee_rate
+                fee_rate = round(fee_rate, 8)
+                print('fee_rate = %.8f' % fee_rate)
+                wallet.jsonobj['Fee Rate'] = round(fee_rate, 8)
 
                 wallet.createRawTxn(fee_rate)
 
@@ -292,8 +294,8 @@ if __name__ == '__main__':
 
                 fee_rate = float(input('change fee_rate (%f btc/kb): ' % fee_rate) or '%f' % fee_rate)
                 fee_rate = round(fee_rate, 8)
-                print('fee_rate = %f' % fee_rate)
-                wallet.jsonobj['Fee Rate'] = fee_rate
+                print('fee_rate = %.8f' % fee_rate)
+                wallet.jsonobj['Fee Rate'] = round(fee_rate, 8)
 
                 wallet.createRawTxnToDivideFunds(fee_rate)
 

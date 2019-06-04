@@ -218,8 +218,6 @@ class RawTxn:
                 input_value = getInputValue(inputs)
 
                 change_value = round(input_value - target_value - estimated_fee, 8)
-                s = input_value - target_value - estimated_fee - change_value
-                print('sum = %f ' % s)
 
                 # if change_value is not 0 then estimated_fee and change_value are wrong
                 if change_value == 0:
@@ -234,9 +232,9 @@ class RawTxn:
                 print('estimated_fee = %f' % estimated_fee)
                 raw_txn = self.rpc_connection.createrawtransaction(tx_ins, new_outs)
                 estimated_fee = self.estimatefee(binascii.unhexlify(raw_txn), fee_rate)
-                change_value = input_value - target_value - estimated_fee
+                change_value = round(input_value - target_value - estimated_fee, 8)
                 while change_value < 0:
-                        inputs = self.getInputs(target_value + estimated_fee)
+                        inputs = self.getInputs(round(target_value + estimated_fee, 8))
                         tx_ins = [{'txid': inp['txid'], 'vout': inp['vout']} for inp in inputs]
                         print('33333333333: tx_ins = %s, outs = %s' % (tx_ins, outs))
                         print('estimated_fee = %f' % estimated_fee)
@@ -244,7 +242,7 @@ class RawTxn:
                         estimated_fee = self.estimatefee(binascii.unhexlify(raw_txn), fee_rate)
                         input_value = getInputValue(inputs)
 
-                        change_value = input_value - target_value - estimated_fee
+                        change_value = round(input_value - target_value - estimated_fee, 8)
                 new_outs = deepcopy(outs)
                 new_outs.append({change_address: round(change_value, 8)})
                 print('44444444444444: tx_ins = %s, new_outs = %s' % (tx_ins, new_outs))
