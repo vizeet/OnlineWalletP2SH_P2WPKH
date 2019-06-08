@@ -96,16 +96,9 @@ class Wallet:
 
                 tx_out = []
 
-                unused_index = 0
-
                 for i in range(out_count):
                         address_value = {}
-                        address = self.unused_list[unused_index]
-                        use_address = ((input('Use Address %s: Y/n? ' % address) or 'Y').lower() == 'y')
-                        if use_address ==False:
-                                address = input('Enter Target Address: ')
-                        else:
-                                unused_index += 1
+                        address = input('Enter Target Address: ')
                         value = float(input('Enter Bitcoins: '))
                         address_value[address] = value
 
