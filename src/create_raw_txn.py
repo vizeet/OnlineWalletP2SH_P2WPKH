@@ -103,7 +103,7 @@ def getTargetValue(tx_out: list):
         return target_value
 
 class RawTxn:
-        def __init__(self, rpc_user, rpc_password, rpc_port, transfer_info_filepath: str):
+        def __init__(self, rpc_user, rpc_password, rpc_port, transfer_info_filepath: str, label: str):
                 global network_port_map_g
                 #self.rpc_connection = rpc_connection
                 self.transfer_info_filepath = transfer_info_filepath
@@ -112,6 +112,7 @@ class RawTxn:
                 print('rpc_port = %d' % rpc_port)
                 self.rpc_connection = AuthServiceProxy("http://%s:%s@127.0.0.1:%d" % (rpc_user, rpc_password, rpc_port))
                 self.inuseAddressMap = None
+                self.label = label
 
         def getInputsForAddress(self, address: str):
                 inputs = []
@@ -119,7 +120,7 @@ class RawTxn:
                 print('address = %s' % address)
 
                 if self.inuseAddressMap == None:
-                        unspent_list = self.rpc_connection.listunspent()
+                        unspent_list = [unspent for unspent in self.rpc_connection.listunspent() if unspent['label'] == self.label]
                         self.setInuseAddressMap(unspent_list)
 
                 print('inuse_address_map[%s] = %s' % (address, self.inuse_address_map[address]))
@@ -152,7 +153,7 @@ class RawTxn:
                 print('********** target value = %f' % amount)
 
                 if len(inuse_address_value_map_g) == 0:
-                        unspent_list = self.rpc_connection.listunspent()
+                        unspent_list = [unspent for unspent in self.rpc_connection.listunspent() if unspent['label'] == self.label]
                         self.setInuseAddressMap(unspent_list)
 
                         print('Inuse addresses are 0')

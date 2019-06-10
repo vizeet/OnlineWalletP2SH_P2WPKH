@@ -30,6 +30,7 @@ import sys
 import requests
 from copy import copy
 from pprint import pprint
+from functools import reduce
 
 network_port_map_g = {
         'regtest': 18443,
@@ -200,7 +201,7 @@ class Wallet:
 
                 self.registerAddresses(self.jsonobj['Addresses'], user)
 
-                raw_txn = create_raw_txn.RawTxn(self.rpc_user, self.rpc_password, self.rpc_port, self.transfer_info_filepath)
+                raw_txn = create_raw_txn.RawTxn(self.rpc_user, self.rpc_password, self.rpc_port, self.transfer_info_filepath, user)
                 txout, change_address = self.getTargetAddresses()
                 self.jsonobj = raw_txn.getRawTxnFromOuts(txout, change_address, fee_rate, self.jsonobj)
 
@@ -210,7 +211,7 @@ class Wallet:
 
                 self.registerAddresses(self.jsonobj['Addresses'], user)
 
-                raw_txn = create_raw_txn.RawTxn(self.rpc_user, self.rpc_password, self.rpc_port, self.transfer_info_filepath)
+                raw_txn = create_raw_txn.RawTxn(self.rpc_user, self.rpc_password, self.rpc_port, self.transfer_info_filepath, user)
                 input_addresses, out_addresses = self.getSourceTargetAddresses()
                 self.jsonobj = raw_txn.getRawTxnToDivideFunds(input_addresses, out_addresses, fee_rate, self.jsonobj)
 
@@ -320,16 +321,20 @@ if __name__ == '__main__':
                 status = wallet.publishSignedTxn()
                 print(status)
         elif choice == 7:
+                user = input('Username: ').lower()
+
                 with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
                         wallet.jsonobj = json.load(transfer_file_f)
 
-                wallet.registerAddresses(wallet.jsonobj['Addresses'])
+                wallet.registerAddresses(wallet.jsonobj['Addresses'], user)
 
                 rescan_block_index = int(input('Rescan Block Index (1): ') or '1')
-                self.rpc_connection.rescanblockchain(rescan_block_index)
+                wallet.rpc_connection.rescanblockchain(rescan_block_index)
         elif choice == 8:
+                user = input('Username: ').lower()
+
                 unspent_list = wallet.rpc_connection.listunspent()
-                amount = reduce(lambda x, y: round(x, 8) + round(y, 8), [unspent['amount'] for unspent in unspent_list])
+                amount = reduce(lambda x, y: round(x, 8) + round(y, 8), [unspent['amount'] for unspent in unspent_list if unspent['label'] == user])
                 print('Total amount in wallet = %.8f' % round(amount, 8))
         else:
                 print('Invalid selection')
