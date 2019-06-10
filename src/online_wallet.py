@@ -96,15 +96,21 @@ class Wallet:
 
                 tx_out = []
 
+                unused_addresses = copy(self.unused_list)
+
                 for i in range(out_count):
                         address_value = {}
                         address = input('Enter Target Address: ')
                         value = float(input('Enter Bitcoins: '))
                         address_value[address] = value
 
+                        if address in unused_addresses:
+                                unused_addresses.remove(address)
+
                         tx_out.append(address_value)
 
-                change_address = self.unused_list[unused_index]
+                change_address = unused_addresses[0]
+                print('change address: %s' % change_address)
                 return tx_out, change_address
 
         def getSourceTargetAddresses(self):
@@ -154,12 +160,12 @@ class Wallet:
 
                 return new_addresses
 
-        def registerAddresses(self, addresses: list):
+        def registerAddresses(self, addresses: list, label: str):
                 new_addresses = self.setNewAddresses(addresses)
 
                 s = []
                 for address in new_addresses:
-                        i = {'scriptPubKey': {'address': address}, 'timestamp': 0, 'label': 'wallet', 'watchonly': True}
+                        i = {'scriptPubKey': {'address': address}, 'timestamp': 0, 'label': label, 'watchonly': True}
                         s.append(i)
 
                 if len(s) > 0:
@@ -188,21 +194,21 @@ class Wallet:
 #                print('inputs = %s' % inputs)
 #                return inputs
 #
-        def createRawTxn(self, fee_rate):
+        def createRawTxn(self, fee_rate, user):
                 print('transfer_info_filepath = %s' % self.transfer_info_filepath)
                 sys.stdout.flush()
 
-                self.registerAddresses(self.jsonobj['Addresses'])
+                self.registerAddresses(self.jsonobj['Addresses'], user)
 
                 raw_txn = create_raw_txn.RawTxn(self.rpc_user, self.rpc_password, self.rpc_port, self.transfer_info_filepath)
                 txout, change_address = self.getTargetAddresses()
                 self.jsonobj = raw_txn.getRawTxnFromOuts(txout, change_address, fee_rate, self.jsonobj)
 
-        def createRawTxnToDivideFunds(self, fee_rate):
+        def createRawTxnToDivideFunds(self, fee_rate, user):
                 print('transfer_info_filepath = %s' % self.transfer_info_filepath)
                 sys.stdout.flush()
 
-                self.registerAddresses(self.jsonobj['Addresses'])
+                self.registerAddresses(self.jsonobj['Addresses'], user)
 
                 raw_txn = create_raw_txn.RawTxn(self.rpc_user, self.rpc_password, self.rpc_port, self.transfer_info_filepath)
                 input_addresses, out_addresses = self.getSourceTargetAddresses()
@@ -255,6 +261,8 @@ if __name__ == '__main__':
                 addresses = wallet.getNextAddresses()
                 print('Use Addresses: %s' % addresses)
         elif choice == 3:
+                user = input('Username: ').lower()
+
                 if network == 'regtest':
                         fee_rate = 0.00005
                 else:
@@ -270,11 +278,13 @@ if __name__ == '__main__':
                 print('fee_rate = %.8f' % fee_rate)
                 wallet.jsonobj['Fee Rate'] = round(fee_rate, 8)
 
-                wallet.createRawTxn(fee_rate)
+                wallet.createRawTxn(fee_rate, user)
 
                 with open(wallet.transfer_info_filepath, 'wt') as transfer_file_f:
                         json.dump(wallet.jsonobj, transfer_file_f)
         elif choice == 4:
+                user = input('Username: ').lower()
+
                 if network == 'regtest':
                         fee_rate = 0.00005
                 else:
@@ -290,7 +300,7 @@ if __name__ == '__main__':
                 print('fee_rate = %.8f' % fee_rate)
                 wallet.jsonobj['Fee Rate'] = round(fee_rate, 8)
 
-                wallet.createRawTxnToDivideFunds(fee_rate)
+                wallet.createRawTxnToDivideFunds(fee_rate, user)
 
                 with open(wallet.transfer_info_filepath, 'wt') as transfer_file_f:
                         json.dump(wallet.jsonobj, transfer_file_f)
