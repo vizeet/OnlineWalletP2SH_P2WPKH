@@ -149,19 +149,19 @@ class Wallet:
                        address_valid_map[address] = self.rpc_connection.validateaddress(address)['isvalid']
                 return address_valid_map
 
-        def setNewAddresses(self, addresses: list):
+        def setNewAddresses(self, addresses: list, label: str):
                 label_list = self.rpc_connection.listlabels()
                 existing_addresses = []
 
-                if 'wallet' in label_list:
-                        existing_addresses = self.rpc_connection.getaddressesbylabel('wallet')
+                if label in label_list:
+                        existing_addresses = self.rpc_connection.getaddressesbylabel(label)
                 new_addresses = set(addresses) - set(existing_addresses)
                 print('new_addresses = %s' % new_addresses)
 
                 return new_addresses
 
         def registerAddresses(self, addresses: list, label: str):
-                new_addresses = self.setNewAddresses(addresses)
+                new_addresses = self.setNewAddresses(addresses, label)
 
                 s = []
                 for address in new_addresses:
@@ -245,6 +245,8 @@ if __name__ == '__main__':
         print('4. Create Raw Transaction to Divide Funds')
         print('5. Decode Signed Transaction')
         print('6. Publish Signed Transaction')
+        print('7. Rescan Blockchain to include missed transactions')
+        print('8. Total Bitcoins in wallet')
         choice = int(input('Selection: '))
 
         wallet = Wallet(network, datadir)
@@ -317,5 +319,17 @@ if __name__ == '__main__':
 
                 status = wallet.publishSignedTxn()
                 print(status)
+        elif choice == 7:
+                with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
+                        wallet.jsonobj = json.load(transfer_file_f)
+
+                wallet.registerAddresses(wallet.jsonobj['Addresses'])
+
+                rescan_block_index = int(input('Rescan Block Index (1): ') or '1')
+                self.rpc_connection.rescanblockchain(rescan_block_index)
+        elif choice == 8:
+                unspent_list = wallet.rpc_connection.listunspent()
+                amount = reduce(lambda x, y: round(x, 8) + round(y, 8), [unspent['amount'] for unspent in unspent_list])
+                print('Total amount in wallet = %.8f' % round(amount, 8))
         else:
                 print('Invalid selection')
