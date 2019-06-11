@@ -248,6 +248,7 @@ if __name__ == '__main__':
         print('6. Publish Signed Transaction')
         print('7. Rescan Blockchain to include missed transactions')
         print('8. Total Bitcoins in wallet')
+        print('9. Verify Created Raw Transaction')
         choice = int(input('Selection: '))
 
         wallet = Wallet(network, datadir)
@@ -336,5 +337,13 @@ if __name__ == '__main__':
                 unspent_list = wallet.rpc_connection.listunspent()
                 amount = reduce(lambda x, y: round(x, 8) + round(y, 8), [unspent['amount'] for unspent in unspent_list if unspent['label'] == user])
                 print('Total amount in wallet = %.8f' % round(amount, 8))
+        elif choice == 9:
+                unspent_list = wallet.rpc_connection.listunspent()
+
+                with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
+                        wallet.jsonobj = json.load(transfer_file_f)
+
+                js = wallet.rpc_connection.decoderawtransaction(wallet.jsonobj['Raw Txn'])
+                js['vin']
         else:
                 print('Invalid selection')
