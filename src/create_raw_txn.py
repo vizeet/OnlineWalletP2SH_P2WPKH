@@ -201,7 +201,7 @@ class RawTxn:
                 print('vbytes = %f' % vbytes)
                 print('estimated_fee = %f' % estimated_fee)
 
-                return estimated_fee
+                return vbytes, estimated_fee
 
         def getRawTransaction(self, inputs: list, outs: list, change_address: str, fee_rate: float, jsonobj: dict):
                 print('fee_rate = %f' % fee_rate)
@@ -212,7 +212,7 @@ class RawTxn:
                 print('111111111: tx_ins = %s, outs = %s' % (tx_ins, outs))
                 raw_txn = self.rpc_connection.createrawtransaction(tx_ins, outs)
 
-                estimated_fee = self.estimatefee(binascii.unhexlify(raw_txn), fee_rate)
+                vbytes, estimated_fee = self.estimatefee(binascii.unhexlify(raw_txn), fee_rate)
                 target_value = getTargetValue(outs)
                 #target_addresses = list(outs)
 
@@ -232,7 +232,7 @@ class RawTxn:
                 print('2222222222: tx_ins = %s, new_outs = %s' % (tx_ins, new_outs))
                 print('estimated_fee = %f' % estimated_fee)
                 raw_txn = self.rpc_connection.createrawtransaction(tx_ins, new_outs)
-                estimated_fee = self.estimatefee(binascii.unhexlify(raw_txn), fee_rate)
+                vbytes, estimated_fee = self.estimatefee(binascii.unhexlify(raw_txn), fee_rate)
                 change_value = round(input_value - target_value - estimated_fee, 8)
                 while change_value < 0:
                         inputs = self.getInputs(round(target_value + estimated_fee, 8))
@@ -240,7 +240,7 @@ class RawTxn:
                         print('33333333333: tx_ins = %s, outs = %s' % (tx_ins, outs))
                         print('estimated_fee = %f' % estimated_fee)
                         raw_txn = self.rpc_connection.createrawtransaction(tx_ins, new_outs)
-                        estimated_fee = self.estimatefee(binascii.unhexlify(raw_txn), fee_rate)
+                        vbytes, estimated_fee = self.estimatefee(binascii.unhexlify(raw_txn), fee_rate)
                         input_value = getInputValue(inputs)
 
                         change_value = round(input_value - target_value - estimated_fee, 8)
@@ -253,6 +253,7 @@ class RawTxn:
 
                 jsonobj['Raw Txn'] = raw_txn
                 jsonobj['Inputs'] = inputs
+                jsonobj['VBytes'] = vbytes
 
                 return jsonobj
 
@@ -277,7 +278,7 @@ class RawTxn:
                 print('111111111: tx_ins = %s, outs = %s' % (tx_ins, outs))
                 raw_txn = self.rpc_connection.createrawtransaction(tx_ins, outs)
 
-                estimated_fee = self.estimatefee(binascii.unhexlify(raw_txn), fee_rate)
+                vbytes, estimated_fee = self.estimatefee(binascii.unhexlify(raw_txn), fee_rate)
                 each_out_value = round((input_value - estimated_fee) / len(out_addresses), 8)
                 outs = dict([(address, each_out_value) for address in out_addresses])
 
@@ -288,6 +289,7 @@ class RawTxn:
 
                 jsonobj['Raw Txn'] = raw_txn
                 jsonobj['Inputs'] = inputs
+                jsonobj['VBytes'] = vbytes
 
                 return jsonobj
 

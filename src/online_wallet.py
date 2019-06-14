@@ -49,7 +49,7 @@ class Wallet:
                 self.rpc_user = input('RPC Username: ')
                 self.rpc_password = input('RPC Password: ')
                 self.rpc_port = network_port_map_g[network]
-                self.rpc_connection = AuthServiceProxy("http://%s:%s@127.0.0.1:%d" %(self.rpc_user, self.rpc_password, self.rpc_port))
+                self.rpc_connection = AuthServiceProxy("http://%s:%s@127.0.0.1:%d" %(self.rpc_user, self.rpc_password, self.rpc_port), timeout=120)
                 self.network = network
                 self.transfer_info_filepath = datadir + '/' + transfer_info_map_g[network]
 
@@ -248,7 +248,7 @@ if __name__ == '__main__':
         print('6. Publish Signed Transaction')
         print('7. Rescan Blockchain to include missed transactions')
         print('8. Total Bitcoins in wallet')
-        print('9. Verify Created Raw Transaction')
+        print('9. Check Network Fee in Signed Transaction')
         choice = int(input('Selection: '))
 
         wallet = Wallet(network, datadir)
@@ -323,13 +323,13 @@ if __name__ == '__main__':
                 print(status)
         elif choice == 7:
                 user = input('Username: ').lower()
+                rescan_block_index = int(input('Rescan Block Index (1): ') or '1')
 
                 with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
                         wallet.jsonobj = json.load(transfer_file_f)
 
                 wallet.registerAddresses(wallet.jsonobj['Addresses'], user)
 
-                rescan_block_index = int(input('Rescan Block Index (1): ') or '1')
                 wallet.rpc_connection.rescanblockchain(rescan_block_index)
         elif choice == 8:
                 user = input('Username: ').lower()
@@ -339,11 +339,35 @@ if __name__ == '__main__':
                 print('Total amount in wallet = %.8f' % round(amount, 8))
         elif choice == 9:
                 unspent_list = wallet.rpc_connection.listunspent()
-
+                print('unspent list = %s' % unspent_list)
                 with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
                         wallet.jsonobj = json.load(transfer_file_f)
 
-                js = wallet.rpc_connection.decoderawtransaction(wallet.jsonobj['Raw Txn'])
-                js['vin']
+                js = wallet.rpc_connection.decoderawtransaction(wallet.jsonobj['Signed Txn'])
+                print('decoded raw txn = %s' % js)
+                print('Inputs:')
+                input_value = 0.0
+                input_txn_list = js['vin']
+                for input_txn in input_txn_list:
+                        for unspent in unspent_list:
+                                if unspent['txid'] == input_txn['txid'] and unspent['vout'] == input_txn['vout']:
+                                        print('txid = %s, vout = %d, amount = %.8f' % (unspent['txid'], unspent['vout'], float(unspent['amount'])))
+                                        input_value = round(input_value + float(unspent['amount']), 8)
+                print('Total Input Value = %.8f' % round(input_value, 8))
+
+                out_value = 0.0
+                print('Output:')
+                for out in js['vout']:
+                        print('addresses = %s, vout = %d, amount = %.8f' % (out['scriptPubKey']['addresses'], out['n'], float(out['value'])))
+                        out_value = round(out_value + float(out['value']), 8)
+
+                print('txn size = %.8f' % wallet.jsonobj['VBytes'])
+                network_fee_calculated = round(js['size'] * wallet.jsonobj['Fee Rate'] / 1000, 8)
+                print('Calculated Network Fee = %.8f' % round(network_fee_calculated, 8))
+                network_fee_actual = round(input_value - out_value, 8)
+                print('Actual Network Fee = %.8f' % round(network_fee_actual, 8))
+
+                diff_network_fee = abs(network_fee_actual - network_fee_calculated)
+                print('Difference between Actual and Calculated Network Fee = %.8f' % round(diff_network_fee, 8))
         else:
                 print('Invalid selection')
