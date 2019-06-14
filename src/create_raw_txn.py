@@ -64,7 +64,7 @@ def calculateVBytes(raw_txn: bytes):
 
         weight_units = witness_bytes + (non_witness_bytes * 4)
 
-        vbytes = weight_units / 4
+        vbytes = round(weight_units / 4)
 
         return vbytes
 

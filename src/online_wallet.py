@@ -49,7 +49,7 @@ class Wallet:
                 self.rpc_user = input('RPC Username: ')
                 self.rpc_password = input('RPC Password: ')
                 self.rpc_port = network_port_map_g[network]
-                self.rpc_connection = AuthServiceProxy("http://%s:%s@127.0.0.1:%d" %(self.rpc_user, self.rpc_password, self.rpc_port), timeout=120)
+                self.rpc_connection = AuthServiceProxy("http://%s:%s@127.0.0.1:%d" %(self.rpc_user, self.rpc_password, self.rpc_port), timeout=600)
                 self.network = network
                 self.transfer_info_filepath = datadir + '/' + transfer_info_map_g[network]
 
@@ -324,6 +324,7 @@ if __name__ == '__main__':
         elif choice == 7:
                 user = input('Username: ').lower()
                 rescan_block_index = int(input('Rescan Block Index (1): ') or '1')
+                print('rescan_block_index = %d' % rescan_block_index)
 
                 with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
                         wallet.jsonobj = json.load(transfer_file_f)
@@ -339,12 +340,12 @@ if __name__ == '__main__':
                 print('Total amount in wallet = %.8f' % round(amount, 8))
         elif choice == 9:
                 unspent_list = wallet.rpc_connection.listunspent()
-                print('unspent list = %s' % unspent_list)
+                #print('unspent list = %s' % unspent_list)
                 with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
                         wallet.jsonobj = json.load(transfer_file_f)
 
                 js = wallet.rpc_connection.decoderawtransaction(wallet.jsonobj['Signed Txn'])
-                print('decoded raw txn = %s' % js)
+                #print('decoded raw txn = %s' % js)
                 print('Inputs:')
                 input_value = 0.0
                 input_txn_list = js['vin']
@@ -361,8 +362,8 @@ if __name__ == '__main__':
                         print('addresses = %s, vout = %d, amount = %.8f' % (out['scriptPubKey']['addresses'], out['n'], float(out['value'])))
                         out_value = round(out_value + float(out['value']), 8)
 
-                print('txn size = %.8f' % wallet.jsonobj['VBytes'])
-                network_fee_calculated = round(js['size'] * wallet.jsonobj['Fee Rate'] / 1000, 8)
+                print('vbytes = %.8f' % wallet.jsonobj['VBytes'])
+                network_fee_calculated = round(js['vsize'] * wallet.jsonobj['Fee Rate'] / 1000, 8)
                 print('Calculated Network Fee = %.8f' % round(network_fee_calculated, 8))
                 network_fee_actual = round(input_value - out_value, 8)
                 print('Actual Network Fee = %.8f' % round(network_fee_actual, 8))
