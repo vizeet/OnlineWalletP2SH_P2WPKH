@@ -31,6 +31,10 @@ import requests
 from copy import copy
 from pprint import pprint
 from functools import reduce
+import pyqrcode
+import tkinter
+
+crypto = 'bitcoin'
 
 network_port_map_g = {
         'regtest': 18443,
@@ -38,9 +42,20 @@ network_port_map_g = {
 }
 
 transfer_info_map_g = {
-        'regtest': 'transfer_info_test.json',
-        'mainnet': 'transfer_info.json'
+        'regtest': 'transfer_info_test',
+        'mainnet': 'transfer_info'
 }
+
+
+def generate_qrcode(message: str):
+        code = pyqrcode.create(message)
+        code_xbm = code.xbm(scale=5)
+        top = tkinter.Tk()
+        code_bmp = tkinter.BitmapImage(data=code_xbm)
+        code_bmp.config(background="white")
+        label = tkinter.Label(top, image=code_bmp)
+        label.pack()
+        top.mainloop()
 
 class Wallet:
         def __init__(self, network: str, datadir: str):
@@ -48,10 +63,13 @@ class Wallet:
 
                 self.rpc_user = input('RPC Username: ')
                 self.rpc_password = input('RPC Password: ')
+                user = input('Username: ').lower()
                 self.rpc_port = network_port_map_g[network]
                 self.rpc_connection = AuthServiceProxy("http://%s:%s@127.0.0.1:%d" %(self.rpc_user, self.rpc_password, self.rpc_port), timeout=600)
                 self.network = network
-                self.transfer_info_filepath = datadir + '/' + transfer_info_map_g[network]
+                self.transfer_info_filepath = datadir + '/' + transfer_info_map_g[network] + '.' + user + '.json'
+                print('transfer_info_filepath = %s' % self.transfer_info_filepath)
+                self.user = user
 
         def isAddressUnused(self, address: str):
                 res = requests.get('https://blockchain.info/rawaddr/' + address)
@@ -174,44 +192,23 @@ class Wallet:
 
                 return new_addresses
 
-#        def getInputs(self, amount: float):
-#                if len(self.inuse_address_value_map) == 0:
-#                        print('Inuse addresses are 0')
-#                        self.setInuseAddressValueMap()
-#
-#                inputs = []
-#                value = 0
-#                for address, address_value in self.inuse_address_value_map.items():
-#                        address_inputs = getInputsForAddress(address)
-#                        value += address_value
-#                        inputs.extend(address_inputs)
-#
-#                        if value >= amount:
-#                                break
-#
-#                if value < amount:
-#                        print('Insufficient Balance')
-#                        return inputs
-#                print('inputs = %s' % inputs)
-#                return inputs
-#
-        def createRawTxn(self, fee_rate, user):
+        def createRawTxn(self, fee_rate):
                 print('transfer_info_filepath = %s' % self.transfer_info_filepath)
                 sys.stdout.flush()
 
-                self.registerAddresses(self.jsonobj['Addresses'], user)
+                self.registerAddresses(self.jsonobj['Addresses'])
 
-                raw_txn = create_raw_txn.RawTxn(self.rpc_user, self.rpc_password, self.rpc_port, self.transfer_info_filepath, user)
+                raw_txn = create_raw_txn.RawTxn(self.rpc_user, self.rpc_password, self.rpc_port, self.transfer_info_filepath, self.user)
                 txout, change_address = self.getTargetAddresses()
                 self.jsonobj = raw_txn.getRawTxnFromOuts(txout, change_address, fee_rate, self.jsonobj)
 
-        def createRawTxnToDivideFunds(self, fee_rate, user):
+        def createRawTxnToDivideFunds(self, fee_rate):
                 print('transfer_info_filepath = %s' % self.transfer_info_filepath)
                 sys.stdout.flush()
 
-                self.registerAddresses(self.jsonobj['Addresses'], user)
+                self.registerAddresses(self.jsonobj['Addresses'])
 
-                raw_txn = create_raw_txn.RawTxn(self.rpc_user, self.rpc_password, self.rpc_port, self.transfer_info_filepath, user)
+                raw_txn = create_raw_txn.RawTxn(self.rpc_user, self.rpc_password, self.rpc_port, self.transfer_info_filepath, self.user)
                 input_addresses, out_addresses = self.getSourceTargetAddresses()
                 self.jsonobj = raw_txn.getRawTxnToDivideFunds(input_addresses, out_addresses, fee_rate, self.jsonobj)
 
@@ -249,6 +246,7 @@ if __name__ == '__main__':
         print('7. Rescan Blockchain to include missed transactions')
         print('8. Total Bitcoins in wallet')
         print('9. Check Network Fee in Signed Transaction')
+        print('10. Generate QR Code for Address')
         choice = int(input('Selection: '))
 
         wallet = Wallet(network, datadir)
@@ -265,8 +263,6 @@ if __name__ == '__main__':
                 addresses = wallet.getNextAddresses()
                 print('Use Addresses: %s' % addresses)
         elif choice == 3:
-                user = input('Username: ').lower()
-
                 if network == 'regtest':
                         fee_rate = 0.00005
                 else:
@@ -282,13 +278,11 @@ if __name__ == '__main__':
                 print('fee_rate = %.8f' % fee_rate)
                 wallet.jsonobj['Fee Rate'] = round(fee_rate, 8)
 
-                wallet.createRawTxn(fee_rate, user)
+                wallet.createRawTxn(fee_rate, self.user)
 
                 with open(wallet.transfer_info_filepath, 'wt') as transfer_file_f:
                         json.dump(wallet.jsonobj, transfer_file_f)
         elif choice == 4:
-                user = input('Username: ').lower()
-
                 if network == 'regtest':
                         fee_rate = 0.00005
                 else:
@@ -304,7 +298,7 @@ if __name__ == '__main__':
                 print('fee_rate = %.8f' % fee_rate)
                 wallet.jsonobj['Fee Rate'] = round(fee_rate, 8)
 
-                wallet.createRawTxnToDivideFunds(fee_rate, user)
+                wallet.createRawTxnToDivideFunds(fee_rate, self.user)
 
                 with open(wallet.transfer_info_filepath, 'wt') as transfer_file_f:
                         json.dump(wallet.jsonobj, transfer_file_f)
@@ -322,21 +316,18 @@ if __name__ == '__main__':
                 status = wallet.publishSignedTxn()
                 print(status)
         elif choice == 7:
-                user = input('Username: ').lower()
                 rescan_block_index = int(input('Rescan Block Index (1): ') or '1')
                 print('rescan_block_index = %d' % rescan_block_index)
 
                 with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
                         wallet.jsonobj = json.load(transfer_file_f)
 
-                wallet.registerAddresses(wallet.jsonobj['Addresses'], user)
+                wallet.registerAddresses(wallet.jsonobj['Addresses'], self.user)
 
                 wallet.rpc_connection.rescanblockchain(rescan_block_index)
         elif choice == 8:
-                user = input('Username: ').lower()
-
                 unspent_list = wallet.rpc_connection.listunspent()
-                amount = reduce(lambda x, y: round(x, 8) + round(y, 8), [unspent['amount'] for unspent in unspent_list if unspent['label'] == user])
+                amount = reduce(lambda x, y: round(x, 8) + round(y, 8), [unspent['amount'] for unspent in unspent_list if unspent['label'] == self.user])
                 print('Total amount in wallet = %.8f' % round(amount, 8))
         elif choice == 9:
                 unspent_list = wallet.rpc_connection.listunspent()
@@ -370,5 +361,21 @@ if __name__ == '__main__':
 
                 diff_network_fee = abs(network_fee_actual - network_fee_calculated)
                 print('Difference between Actual and Calculated Network Fee = %.8f' % round(diff_network_fee, 8))
+        elif choice == 10:
+                address = input('Enter Address: ')
+                if wallet.rpc_connection.validateaddress(address)['isvalid'] == False:
+                        print('Address is invalid')
+                else:
+                        print('1. Address Only')
+                        print('2. URI without amount')
+                        print('3. URI with amount')
+                        choice = int(input('Select QR Code Format: '))
+                        if choice == 1:
+                                generate_qrcode(address)
+                        elif choice == 2:
+                                generate_qrcode('%s:%s' % (crypto, address))
+                        elif choice == 3:
+                                amount = float(input('Enter amount to receive: '))
+                                generate_qrcode('%s:%s?amount=%.8f' % (crypto, address, amount))
         else:
                 print('Invalid selection')
