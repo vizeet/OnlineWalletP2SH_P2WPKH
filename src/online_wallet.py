@@ -33,19 +33,27 @@ from pprint import pprint
 from functools import reduce
 import pyqrcode
 import tkinter
-
-crypto = 'bitcoin'
+import os
 
 network_port_map_g = {
-        'regtest': 18443,
-        'mainnet': 8332
+        'bitcoin': {
+                'regtest': 18443,
+                'testnet': 18332,
+                'mainnet': 8332
+        },
+        'litecoin': {
+                'regtest': 19443,
+                'testnet': 19332,
+                'mainnet': 9332
+        }
 }
 
 transfer_info_map_g = {
-        'regtest': 'transfer_info_test',
+        'regtest': 'transfer_info_regtest',
         'mainnet': 'transfer_info'
 }
 
+crypto_map_g = ['bitcoin', 'litecoin']
 
 def generate_qrcode(message: str):
         code = pyqrcode.create(message)
@@ -59,15 +67,17 @@ def generate_qrcode(message: str):
 
 class Wallet:
         def __init__(self, network: str, datadir: str):
-                global network_port_map_g, transfer_info_map_g
+                global network_port_map_g, ltc_network_port_map_g, transfer_info_map_g
 
                 self.rpc_user = input('RPC Username: ')
                 self.rpc_password = input('RPC Password: ')
                 user = input('Username: ').lower()
-                self.rpc_port = network_port_map_g[network]
+                self.crypto = crypto_map_g[int(input('Select Crypto(0 => Bitcoin or 1 => Litecoin): '))]
+                self.rpc_port = network_port_map_g[self.crypto][network]
+                print('port = %d' % self.rpc_port)
                 self.rpc_connection = AuthServiceProxy("http://%s:%s@127.0.0.1:%d" %(self.rpc_user, self.rpc_password, self.rpc_port), timeout=600)
                 self.network = network
-                self.transfer_info_filepath = datadir + '/' + transfer_info_map_g[network] + '.' + user + '.json'
+                self.transfer_info_filepath = os.path.join(datadir, '%s.%s.%s.json' % (transfer_info_map_g[network], self.crypto, user))
                 print('transfer_info_filepath = %s' % self.transfer_info_filepath)
                 self.user = user
 
@@ -168,7 +178,8 @@ class Wallet:
                        address_valid_map[address] = self.rpc_connection.validateaddress(address)['isvalid']
                 return address_valid_map
 
-        def setNewAddresses(self, addresses: list, label: str):
+        def setNewAddresses(self, addresses: list):
+                label = self.user
                 label_list = self.rpc_connection.listlabels()
                 existing_addresses = []
 
@@ -179,12 +190,12 @@ class Wallet:
 
                 return new_addresses
 
-        def registerAddresses(self, addresses: list, label: str):
-                new_addresses = self.setNewAddresses(addresses, label)
+        def registerAddresses(self, addresses: list):
+                new_addresses = self.setNewAddresses(addresses)
 
                 s = []
                 for address in new_addresses:
-                        i = {'scriptPubKey': {'address': address}, 'timestamp': 0, 'label': label, 'watchonly': True}
+                        i = {'scriptPubKey': {'address': address}, 'timestamp': 0, 'label': self.user, 'watchonly': True}
                         s.append(i)
 
                 if len(s) > 0:
@@ -229,14 +240,24 @@ if __name__ == '__main__':
         (options, _) = parser.parse_args()
 
         if options.test:
-                network = 'regtest'
-                datadir = '/home/online/wallet'
+                config_filename = 'hd_wallet_regtest.conf'
         else:
-                with open('../config/hd_wallet.conf', 'rt') as conf_f:
-                        jsonobj = json.load(conf_f)
+                config_filename = 'hd_wallet.conf'
+
+        with open(os.path.join('..', 'config', config_filename), 'rt') as conf_f:
+                jsonobj = json.load(conf_f)
                 network = jsonobj['network']
                 datadir = jsonobj['datadir']
 
+#        if options.test:
+#                network = 'regtest'
+#                datadir = '/home/online/wallet'
+#        else:
+#                with open('../config/hd_wallet.conf', 'rt') as conf_f:
+#                        jsonobj = json.load(conf_f)
+#                network = jsonobj['network']
+#                datadir = jsonobj['datadir']
+#
         print('1. Validate Addresses')
         print('2. Get Next Addresses')
         print('3. Create Raw Transaction')
@@ -278,7 +299,7 @@ if __name__ == '__main__':
                 print('fee_rate = %.8f' % fee_rate)
                 wallet.jsonobj['Fee Rate'] = round(fee_rate, 8)
 
-                wallet.createRawTxn(fee_rate, self.user)
+                wallet.createRawTxn(fee_rate)
 
                 with open(wallet.transfer_info_filepath, 'wt') as transfer_file_f:
                         json.dump(wallet.jsonobj, transfer_file_f)
@@ -298,7 +319,7 @@ if __name__ == '__main__':
                 print('fee_rate = %.8f' % fee_rate)
                 wallet.jsonobj['Fee Rate'] = round(fee_rate, 8)
 
-                wallet.createRawTxnToDivideFunds(fee_rate, self.user)
+                wallet.createRawTxnToDivideFunds(fee_rate)
 
                 with open(wallet.transfer_info_filepath, 'wt') as transfer_file_f:
                         json.dump(wallet.jsonobj, transfer_file_f)
@@ -322,12 +343,12 @@ if __name__ == '__main__':
                 with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
                         wallet.jsonobj = json.load(transfer_file_f)
 
-                wallet.registerAddresses(wallet.jsonobj['Addresses'], self.user)
+                wallet.registerAddresses(wallet.jsonobj['Addresses'])
 
                 wallet.rpc_connection.rescanblockchain(rescan_block_index)
         elif choice == 8:
                 unspent_list = wallet.rpc_connection.listunspent()
-                amount = reduce(lambda x, y: round(x, 8) + round(y, 8), [unspent['amount'] for unspent in unspent_list if unspent['label'] == self.user])
+                amount = reduce(lambda x, y: round(x, 8) + round(y, 8), [unspent['amount'] for unspent in unspent_list if unspent['label'] == wallet.user])
                 print('Total amount in wallet = %.8f' % round(amount, 8))
         elif choice == 9:
                 unspent_list = wallet.rpc_connection.listunspent()
@@ -373,9 +394,9 @@ if __name__ == '__main__':
                         if choice == 1:
                                 generate_qrcode(address)
                         elif choice == 2:
-                                generate_qrcode('%s:%s' % (crypto, address))
+                                generate_qrcode('%s:%s' % (wallet.crypto, address))
                         elif choice == 3:
                                 amount = float(input('Enter amount to receive: '))
-                                generate_qrcode('%s:%s?amount=%.8f' % (crypto, address, amount))
+                                generate_qrcode('%s:%s?amount=%.8f' % (wallet.crypto, address, amount))
         else:
                 print('Invalid selection')
