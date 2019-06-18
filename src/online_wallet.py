@@ -263,15 +263,16 @@ if __name__ == '__main__':
 #                datadir = jsonobj['datadir']
 #
         print('1. Validate Addresses')
-        print('2. Get Next Addresses')
-        print('3. Create Raw Transaction')
-        print('4. Create Raw Transaction to Divide Funds')
-        print('5. Decode Signed Transaction')
-        print('6. Publish Signed Transaction')
-        print('7. Rescan Blockchain to include missed transactions')
-        print('8. Total Bitcoins in wallet')
-        print('9. Check Network Fee in Signed Transaction')
-        print('10. Generate QR Code for Address')
+        print('2. Register Addresses')
+        print('3. Get Next Addresses')
+        print('4. Create Raw Transaction')
+        print('5. Create Raw Transaction to Divide Funds')
+        print('6. Decode Signed Transaction')
+        print('7. Publish Signed Transaction')
+        print('8. Rescan Blockchain to include missed transactions')
+        print('9. Total Bitcoins in wallet')
+        print('10. Check Network Fee in Signed Transaction')
+        print('11. Generate QR Code for Address')
         choice = int(input('Selection: '))
 
         wallet = Wallet(network, datadir)
@@ -282,12 +283,18 @@ if __name__ == '__main__':
 
                 address_valid_map = wallet.validateAddresses()
                 print(address_valid_map)
-        elif choice == 2:
+        if choice == 2:
+                with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
+                        wallet.jsonobj = json.load(transfer_file_f)
+
+                new_addresses = wallet.registerAddresses(wallet.jsonobj['Addresses'])
+                print('New Addresses Registered : %s' % list(new_addresses))
+        elif choice == 3:
                 with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
                         wallet.jsonobj = json.load(transfer_file_f)
                 addresses = wallet.getNextAddresses()
                 print('Use Addresses: %s' % addresses)
-        elif choice == 3:
+        elif choice == 4:
                 if network == 'regtest':
                         fee_rate = 0.00005
                 else:
@@ -312,7 +319,7 @@ if __name__ == '__main__':
 
                 with open(wallet.transfer_info_filepath, 'wt') as transfer_file_f:
                         json.dump(wallet.jsonobj, transfer_file_f)
-        elif choice == 4:
+        elif choice == 5:
                 if network == 'regtest':
                         fee_rate = 0.00005
                 else:
@@ -332,20 +339,20 @@ if __name__ == '__main__':
 
                 with open(wallet.transfer_info_filepath, 'wt') as transfer_file_f:
                         json.dump(wallet.jsonobj, transfer_file_f)
-        elif choice == 5:
+        elif choice == 6:
                 with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
                         wallet.jsonobj = json.load(transfer_file_f)
 
                 decoded_txn = wallet.decodeSignedTransaction()
                 pprint(decoded_txn)
 
-        elif choice == 6:
+        elif choice == 7:
                 with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
                         wallet.jsonobj = json.load(transfer_file_f)
 
                 status = wallet.publishSignedTxn()
                 print(status)
-        elif choice == 7:
+        elif choice == 8:
                 rescan_block_index = int(input('Rescan Block Index (1): ') or '1')
 #                print('rescan_block_index = %d' % rescan_block_index)
 
@@ -355,11 +362,11 @@ if __name__ == '__main__':
                 wallet.registerAddresses(wallet.jsonobj['Addresses'])
 
                 wallet.rpc_connection.rescanblockchain(rescan_block_index)
-        elif choice == 8:
+        elif choice == 9:
                 unspent_list = wallet.rpc_connection.listunspent()
                 amount = reduce(lambda x, y: round(x, 8) + round(y, 8), [unspent['amount'] for unspent in unspent_list if unspent['label'] == wallet.user])
                 print('Total amount in wallet = %.8f' % round(amount, 8))
-        elif choice == 9:
+        elif choice == 10:
                 unspent_list = wallet.rpc_connection.listunspent()
                 #print('unspent list = %s' % unspent_list)
                 with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
@@ -391,7 +398,7 @@ if __name__ == '__main__':
 
                 diff_network_fee = abs(network_fee_actual - network_fee_calculated)
                 print('Difference between Actual and Calculated Network Fee = %.8f' % round(diff_network_fee, 8))
-        elif choice == 10:
+        elif choice == 11:
                 address = input('Enter Address: ')
                 if wallet.rpc_connection.validateaddress(address)['isvalid'] == False:
                         print('Address is invalid')
