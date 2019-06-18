@@ -32,10 +32,10 @@ from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
 inuse_address_value_map_g = {}
 
 def getUnspentValueForAddress(inuse_address_map: dict, address: str):
-        print('********** inuse_address_map = %s' % json.dumps(inuse_address_map))
+#        print('********** inuse_address_map = %s' % json.dumps(inuse_address_map))
         value = 0
         for txn in inuse_address_map[address]:
-                print('************** txn = %s' % txn)
+#                print('************** txn = %s' % txn)
                 for vout_value_map in inuse_address_map[address][txn]:
                         value += vout_value_map['amount']
 
@@ -69,9 +69,9 @@ def calculateVBytes(raw_txn: bytes):
         return vbytes
 
 def getCount(raw_txn: bytes):
-        print('raw_txn = %s' % bytes.decode(binascii.hexlify(raw_txn)))
+#        print('raw_txn = %s' % bytes.decode(binascii.hexlify(raw_txn)))
         txn_size = int(raw_txn[4])
-        print('txn_size = %d' % txn_size)
+#        print('txn_size = %d' % txn_size)
 
         if txn_size < 0xfd:
                 return txn_size
@@ -87,17 +87,17 @@ def getCount(raw_txn: bytes):
 
 def btc2bytes(btc: float):
         satoshis = int(btc * (10**8))
-        print('satoshis = %s' % satoshis)
+#        print('satoshis = %s' % satoshis)
         hex_b = binascii.unhexlify('%016x' % satoshis)[::-1]
         return hex_b
 
 def getInputValue(inputs: list):
-        print('inputs = %s' % inputs)
+#        print('inputs = %s' % inputs)
         input_value = reduce((lambda x, y: x + y), [inp['value'] for inp in inputs])
         return input_value
 
 def getTargetValue(tx_out: list):
-        print('tx_out = %s' % tx_out)
+#        print('tx_out = %s' % tx_out)
         target_value = 0
         target_value = reduce(lambda x, y: x + y, [list(out.items())[0][1] for out in tx_out])
         return target_value
@@ -107,9 +107,9 @@ class RawTxn:
                 global network_port_map_g
                 #self.rpc_connection = rpc_connection
                 self.transfer_info_filepath = transfer_info_filepath
-                print('rpc_user = %s' % rpc_user)
-                print('rpc_password = %s' % rpc_password)
-                print('rpc_port = %d' % rpc_port)
+#                print('rpc_user = %s' % rpc_user)
+#                print('rpc_password = %s' % rpc_password)
+#                print('rpc_port = %d' % rpc_port)
                 self.rpc_connection = AuthServiceProxy("http://%s:%s@127.0.0.1:%d" % (rpc_user, rpc_password, rpc_port))
                 self.inuseAddressMap = None
                 self.label = label
@@ -117,16 +117,16 @@ class RawTxn:
         def getInputsForAddress(self, address: str):
                 inputs = []
 
-                print('address = %s' % address)
+#                print('address = %s' % address)
 
                 if self.inuseAddressMap == None:
                         unspent_list = [unspent for unspent in self.rpc_connection.listunspent() if unspent['label'] == self.label]
                         self.setInuseAddressMap(unspent_list)
 
-                print('inuse_address_map[%s] = %s' % (address, self.inuse_address_map[address]))
+#                print('inuse_address_map[%s] = %s' % (address, self.inuse_address_map[address]))
 
                 for txn in self.inuse_address_map[address]:
-                        print('txn = %s' % txn)
+#                        print('txn = %s' % txn)
                         for vout_amount_map in self.inuse_address_map[address][txn]:
                                 value = vout_amount_map['amount']
                                 out_index = vout_amount_map['vout']
@@ -150,16 +150,16 @@ class RawTxn:
         def getInputs(self, amount: float):
                 global inuse_address_value_map_g
 
-                print('********** target value = %f' % amount)
+#                print('********** target value = %f' % amount)
 
                 if len(inuse_address_value_map_g) == 0:
                         unspent_list = [unspent for unspent in self.rpc_connection.listunspent() if unspent['label'] == self.label]
                         self.setInuseAddressMap(unspent_list)
 
-                        print('Inuse addresses are 0')
+#                        print('Inuse addresses are 0')
                         setInuseAddressValueMap(self.inuse_address_map)
 
-                print('************* inuse_address_value_map = %s' % inuse_address_value_map_g)
+#                print('************* inuse_address_value_map = %s' % inuse_address_value_map_g)
 
                 inputs = []
                 value = 0
@@ -175,7 +175,7 @@ class RawTxn:
                         print('Error: Insufficient Balance')
                         return None
 
-                print('inputs = %s' % inputs)
+#                print('inputs = %s' % inputs)
                 return inputs
 
         def getInputsForAddressList(self, address_list: list):
@@ -184,7 +184,7 @@ class RawTxn:
                         address_inputs = self.getInputsForAddress(address)
                         inputs.extend(address_inputs)
 
-                print('inputs = %s' % inputs)
+#                print('inputs = %s' % inputs)
                 return inputs
 
         def getAmountFromInputs(self, inputs: list):
@@ -194,22 +194,22 @@ class RawTxn:
 
                 vbytes = calculateVBytes(raw_txn)
 
-                print('vbytes = %f' % vbytes)
+#                print('vbytes = %f' % vbytes)
 
                 estimated_fee = round(fee_rate * (vbytes / 1000), 8)
 
-                print('vbytes = %f' % vbytes)
-                print('estimated_fee = %f' % estimated_fee)
+#                print('vbytes = %f' % vbytes)
+#                print('estimated_fee = %f' % estimated_fee)
 
                 return vbytes, estimated_fee
 
         def getRawTransaction(self, inputs: list, outs: list, change_address: str, fee_rate: float, jsonobj: dict):
-                print('fee_rate = %f' % fee_rate)
+#                print('fee_rate = %f' % fee_rate)
 
                 tx_ins = [{'txid': inp['txid'], 'vout': inp['vout']} for inp in inputs]
 
                 # first get raw transaction without change
-                print('111111111: tx_ins = %s, outs = %s' % (tx_ins, outs))
+#                print('111111111: tx_ins = %s, outs = %s' % (tx_ins, outs))
                 raw_txn = self.rpc_connection.createrawtransaction(tx_ins, outs)
 
                 vbytes, estimated_fee = self.estimatefee(binascii.unhexlify(raw_txn), fee_rate)
@@ -229,16 +229,16 @@ class RawTxn:
 
                 new_outs = deepcopy(outs)
                 new_outs.append({change_address: round(change_value, 8)})
-                print('2222222222: tx_ins = %s, new_outs = %s' % (tx_ins, new_outs))
-                print('estimated_fee = %f' % estimated_fee)
+#                print('2222222222: tx_ins = %s, new_outs = %s' % (tx_ins, new_outs))
+#                print('estimated_fee = %f' % estimated_fee)
                 raw_txn = self.rpc_connection.createrawtransaction(tx_ins, new_outs)
                 vbytes, estimated_fee = self.estimatefee(binascii.unhexlify(raw_txn), fee_rate)
                 change_value = round(input_value - target_value - estimated_fee, 8)
                 while change_value < 0:
                         inputs = self.getInputs(round(target_value + estimated_fee, 8))
                         tx_ins = [{'txid': inp['txid'], 'vout': inp['vout']} for inp in inputs]
-                        print('33333333333: tx_ins = %s, outs = %s' % (tx_ins, outs))
-                        print('estimated_fee = %f' % estimated_fee)
+#                        print('33333333333: tx_ins = %s, outs = %s' % (tx_ins, outs))
+#                        print('estimated_fee = %f' % estimated_fee)
                         raw_txn = self.rpc_connection.createrawtransaction(tx_ins, new_outs)
                         vbytes, estimated_fee = self.estimatefee(binascii.unhexlify(raw_txn), fee_rate)
                         input_value = getInputValue(inputs)
@@ -246,10 +246,10 @@ class RawTxn:
                         change_value = round(input_value - target_value - estimated_fee, 8)
                 new_outs = deepcopy(outs)
                 new_outs.append({change_address: round(change_value, 8)})
-                print('44444444444444: tx_ins = %s, new_outs = %s' % (tx_ins, new_outs))
-                print('estimated_fee = %f' % estimated_fee)
+#                print('44444444444444: tx_ins = %s, new_outs = %s' % (tx_ins, new_outs))
+#                print('estimated_fee = %f' % estimated_fee)
                 raw_txn = self.rpc_connection.createrawtransaction(tx_ins, new_outs)
-                print('raw txn = %s' % raw_txn)
+#                print('raw txn = %s' % raw_txn)
 
                 jsonobj['Raw Txn'] = raw_txn
                 jsonobj['Inputs'] = inputs
@@ -263,7 +263,7 @@ class RawTxn:
                 return self.getRawTransaction(inputs, txout, change_address, fee_rate, jsonobj)
 
         def getRawTxnToDivideFunds(self, input_addresses: list, out_addresses: list, fee_rate: float, jsonobj: dict):
-                print('fee_rate = %f' % fee_rate)
+#                print('fee_rate = %f' % fee_rate)
 
                 inputs = self.getInputsForAddressList(input_addresses)
                 input_value = getInputValue(inputs)
@@ -275,7 +275,7 @@ class RawTxn:
                 tx_ins = [{'txid': inp['txid'], 'vout': inp['vout']} for inp in inputs]
 
                 # first get raw transaction without change
-                print('111111111: tx_ins = %s, outs = %s' % (tx_ins, outs))
+#                print('111111111: tx_ins = %s, outs = %s' % (tx_ins, outs))
                 raw_txn = self.rpc_connection.createrawtransaction(tx_ins, outs)
 
                 vbytes, estimated_fee = self.estimatefee(binascii.unhexlify(raw_txn), fee_rate)
@@ -283,9 +283,9 @@ class RawTxn:
                 outs = dict([(address, each_out_value) for address in out_addresses])
 
                 # second get raw transaction without change
-                print('22222222: tx_ins = %s, outs = %s' % (tx_ins, outs))
+#                print('22222222: tx_ins = %s, outs = %s' % (tx_ins, outs))
                 raw_txn = self.rpc_connection.createrawtransaction(tx_ins, outs)
-                print('raw txn = %s' % raw_txn)
+#                print('raw txn = %s' % raw_txn)
 
                 jsonobj['Raw Txn'] = raw_txn
                 jsonobj['Inputs'] = inputs

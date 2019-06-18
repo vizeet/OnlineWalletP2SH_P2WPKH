@@ -74,17 +74,21 @@ class Wallet:
                 user = input('Username: ').lower()
                 self.crypto = crypto_map_g[int(input('Select Crypto(0 => Bitcoin or 1 => Litecoin): '))]
                 self.rpc_port = network_port_map_g[self.crypto][network]
-                print('port = %d' % self.rpc_port)
                 self.rpc_connection = AuthServiceProxy("http://%s:%s@127.0.0.1:%d" %(self.rpc_user, self.rpc_password, self.rpc_port), timeout=600)
                 self.network = network
                 self.transfer_info_filepath = os.path.join(datadir, '%s.%s.%s.json' % (transfer_info_map_g[network], self.crypto, user))
-                print('transfer_info_filepath = %s' % self.transfer_info_filepath)
                 self.user = user
 
         def isAddressUnused(self, address: str):
-                res = requests.get('https://blockchain.info/rawaddr/' + address)
-                jsonobj = json.loads(res.text)
-                return (jsonobj['total_received'] == 0)
+                if self.crypto == 'bitcoin':
+                        res = requests.get('https://blockchain.info/rawaddr/' + address)
+                        jsonobj = json.loads(res.text)
+                        return (jsonobj['total_received'] == 0)
+
+                if self.crypto == 'litecoin':
+                        res = requests.get('https://chain.so/api/v2/address/LTC/' + address)
+                        jsonobj = json.loads(res.text)
+                        return (jsonobj['data']['total_txs'] == 0)
 
         def setUnusedAddresses(self):
                 self.unused_list = [address for address in self.jsonobj['Addresses'] if self.isAddressUnused(address) == True]
@@ -102,7 +106,7 @@ class Wallet:
                 else:
                         self.unused_list = copy(self.jsonobj['Addresses'])
 
-                print('unused list = %s' % self.unused_list)
+#                print('unused list = %s' % self.unused_list)
 
         def getNextAddresses(self):
                 if network == 'regtest':
@@ -168,7 +172,7 @@ class Wallet:
 
                         out_addresses.append(address)
 
-                print('out_addresses = %s' % out_addresses)
+#                print('out_addresses = %s' % out_addresses)
 
                 return input_addresses, out_addresses
 
@@ -186,7 +190,7 @@ class Wallet:
                 if label in label_list:
                         existing_addresses = self.rpc_connection.getaddressesbylabel(label)
                 new_addresses = set(addresses) - set(existing_addresses)
-                print('new_addresses = %s' % new_addresses)
+#                print('new_addresses = %s' % new_addresses)
 
                 return new_addresses
 
@@ -204,7 +208,7 @@ class Wallet:
                 return new_addresses
 
         def createRawTxn(self, fee_rate):
-                print('transfer_info_filepath = %s' % self.transfer_info_filepath)
+#                print('transfer_info_filepath = %s' % self.transfer_info_filepath)
                 sys.stdout.flush()
 
                 self.registerAddresses(self.jsonobj['Addresses'])
@@ -214,7 +218,7 @@ class Wallet:
                 self.jsonobj = raw_txn.getRawTxnFromOuts(txout, change_address, fee_rate, self.jsonobj)
 
         def createRawTxnToDivideFunds(self, fee_rate):
-                print('transfer_info_filepath = %s' % self.transfer_info_filepath)
+#                print('transfer_info_filepath = %s' % self.transfer_info_filepath)
                 sys.stdout.flush()
 
                 self.registerAddresses(self.jsonobj['Addresses'])
@@ -289,14 +293,19 @@ if __name__ == '__main__':
                 else:
                         conf_target_block = int(input('Confirmation Target Block for fee estimation: '))
                         fee_rate = float(wallet.getFeeRate(conf_target_block))
-                        print('fee_rate = %f' % fee_rate)
+#                        print('fee_rate = %f' % fee_rate)
 
                 with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
                         wallet.jsonobj = json.load(transfer_file_f)
 
-                fee_rate = float(input('change fee_rate (%f btc/kb): ' % fee_rate) or '%f' % fee_rate)
+                if wallet.crypto == 'bitcoin':
+                        fee_rate = float(input('change fee_rate (%f btc/kb): ' % fee_rate) or '%f' % fee_rate)
+                elif wallet.crypto == 'litecoin':
+                        fee_rate = float(input('change fee_rate (%f ltc/kb): ' % fee_rate) or '%f' % fee_rate)
+                else:
+                        print('crypto %s not supported' % wallet.crypto)
                 fee_rate = round(fee_rate, 8)
-                print('fee_rate = %.8f' % fee_rate)
+#                print('fee_rate = %.8f' % fee_rate)
                 wallet.jsonobj['Fee Rate'] = round(fee_rate, 8)
 
                 wallet.createRawTxn(fee_rate)
@@ -309,14 +318,14 @@ if __name__ == '__main__':
                 else:
                         conf_target_block = int(input('Confirmation Target Block for fee estimation: '))
                         fee_rate = float(wallet.getFeeRate(conf_target_block))
-                        print('fee_rate = %f' % fee_rate)
+#                        print('fee_rate = %f' % fee_rate)
 
                 with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
                         wallet.jsonobj = json.load(transfer_file_f)
 
                 fee_rate = float(input('change fee_rate (%f btc/kb): ' % fee_rate) or '%f' % fee_rate)
                 fee_rate = round(fee_rate, 8)
-                print('fee_rate = %.8f' % fee_rate)
+#                print('fee_rate = %.8f' % fee_rate)
                 wallet.jsonobj['Fee Rate'] = round(fee_rate, 8)
 
                 wallet.createRawTxnToDivideFunds(fee_rate)
@@ -338,7 +347,7 @@ if __name__ == '__main__':
                 print(status)
         elif choice == 7:
                 rescan_block_index = int(input('Rescan Block Index (1): ') or '1')
-                print('rescan_block_index = %d' % rescan_block_index)
+#                print('rescan_block_index = %d' % rescan_block_index)
 
                 with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
                         wallet.jsonobj = json.load(transfer_file_f)
