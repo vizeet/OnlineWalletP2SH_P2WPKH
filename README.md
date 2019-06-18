@@ -74,36 +74,47 @@ RPC Password: test
 Username: test
 ```
 i. Validate generated addresses
+
 Option 1. This will print json with each address as true or false.
 
 ii. Register addresses
+
 Option 2. Registers generated addresses with username to monitor those addresses.
 
 iii. To use next address for receiving bitcoins
+
 Option 3. Enter number of addresses and this will return unused addresses which can be used to receive bitcoins.
 
 iv. Generate Raw Transaction:
+
 Option 4. Provide out addresses along with amount. This generates a pre-signed transaction.
 
 v. Create Raw Transaction to Divide Funds
+
 Option 5. This helps in dividing funds at an address to multiple addresses.
 
 vi. Decode Signed Transaction to check inputs and outputs of transactions are as expected:
+
 Option 6. This prints signed transaction in json format.
 
 vii.  Publish Signed Transaction to push it into network
+
 Option 7. This publishes/broadcasts signed transaction to network and returns transaction-id. This can be checked for confirmation.s
 
 viii. Rescan Blockchain to include missed transactions
+
 Option 8. If an address is not registered you need to provide block height at which the transaction which includes missed address was confirmed. 
 
 ix. Total Bitcoins in wallet
+
 Option 9. This provides total bitcoins associated with user
 
 x. Check Network Fee in Signed Transaction
+
 Option 10. This provides information about input txids, values and out addresses and out values and also network fees paid. It also checks if there is any calculation mismatch.
 
 xi. Generate QR Code for Address
+
 Option 11. This provides 3 ways to generate QR code which might be useful for different exchanges or apps.
 
 ## Contributing
