@@ -28,7 +28,7 @@ git clone https://github.com/vizeet/OnlineWalletP2SH_P2WPKH.git
 
 ## Usage
 1. Begin with Project "BitcoinHDWallet"
-2. Start bitcoin daemon
+2. Start bitcoin daemon and provide rpcuser rpcpassword as you wish
 ```bash
 bitcoind -dbcache=4096 -txindex=1 -rpcuser=test -rpcpassword=test -timeout=30
 ```
@@ -55,7 +55,8 @@ cd src
 python2 online_wallet.py [-t]
 ```
 -t is for test mode.
-Select option 1.
+Select option 1. You will asked to provide rpcuser and rpcpassword as was provided in bitcoin daemon.
+Also you will need to provide username to associate addresses with a tag
 
 4. To use next address for receiving bitcoins
 ```bash
