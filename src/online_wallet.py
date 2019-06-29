@@ -36,6 +36,11 @@ import tkinter
 import os
 from utility_adapters import qrutils
 
+def decimal_default(obj):
+    if isinstance(obj, decimal.Decimal):
+        return float(obj)
+    raise TypeError
+
 network_port_map_g = {
         'bitcoin': {
                 'regtest': 18443,
@@ -440,8 +445,16 @@ if __name__ == '__main__':
         elif choice == 12:
                 unspent_list = wallet.rpc_connection.listunspent()
                 print('Unspent Addresses:')
+#                print(json.dumps(unspent_list, indent=4, default=decimal_default))
+                address_amount_map = {}
                 for unspent in unspent_list:
                         if unspent['label'] == wallet.user:
-                                print("%s: %.8f" % (unspent['address'], unspent['amount']))
+                                print('unspent: %s' % unspent)
+                                if unspent['address'] in address_amount_map:
+                                        address_amount_map[unspent['address']] = round(address_amount_map[unspent['address']] + unspent['amount'], 8)
+                                else:
+                                        address_amount_map[unspent['address']] = round(unspent['amount'], 8)
+                for address, amount in address_amount_map.items():
+                        print("%s: %.8f" % (address, amount))
         else:
                 print('Invalid selection')
