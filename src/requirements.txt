@@ -1,2 +1,5 @@
 python-bitcoinrpc==1.0
 PyQRCode==1.2.1
+opecv-python==4.1.0.25
+pyzbar==0.1.8
+numpy==1.16.4

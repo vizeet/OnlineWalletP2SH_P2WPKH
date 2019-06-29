@@ -34,6 +34,7 @@ from functools import reduce
 import pyqrcode
 import tkinter
 import os
+from utility_adapters import qrutils
 
 network_port_map_g = {
         'bitcoin': {
@@ -133,8 +134,17 @@ class Wallet:
 
                 for i in range(out_count):
                         address_value = {}
-                        address = input('Enter Target Address: ')
-                        value = float(input('Enter Bitcoins: '))
+                        choice = (input('Scan QR code [Y/n]: ') or 'Y').lower()
+                        if choice == 'y':
+                                qrcode = qrutils.scanQRCode()
+                                address = qrcode.split(':')[1].split('?')[0] if ':' in qrcode else qrcode.split('?')[0]
+                                value = float(qrcode.split('?')[1].split('=')[1]) if '?' in qrcode else float(input('Enter Bitcoins: '))
+                        elif choice == 'n':
+                                address = input('Enter Target Address: ')
+                                value = float(input('Enter Bitcoins: '))
+                        else:
+                                print('Invalid entry')
+                                exit()
                         address_value[address] = value
 
                         if address in unused_addresses:
@@ -166,9 +176,18 @@ class Wallet:
                 out_addresses = []
 
                 for i in range(out_count):
-                        #address = input('Enter Target Address: ')
-                        address = self.unused_list[i]
-                        #use_address = ((input('Use Address %s: Y/n? ' % address) or 'Y').lower() == 'y')
+                        choice = (input('Scan QR code [Y/n]: ') or 'Y').lower()
+                        if choice == 'y':
+                                qrcode = qrutils.scanQRCode()
+                                if '?' in qrcode:
+                                        print('QR code should not contain amount. Use option "Create Raw Transaction" instead.')
+                                        exit()
+                                address = qrcode.split(':')[1] if ':' in qrcode else qrcode
+                        elif choice == 'n':
+                                address = input('Enter Target Address: ')
+                        else:
+                                print('Invalid entry')
+                                exit()
 
                         out_addresses.append(address)
 
@@ -202,8 +221,9 @@ class Wallet:
                         i = {'scriptPubKey': {'address': address}, 'timestamp': 0, 'label': self.user, 'watchonly': True}
                         s.append(i)
 
+                options = {'rescan': False}
                 if len(s) > 0:
-                        self.rpc_connection.importmulti(s)
+                        self.rpc_connection.importmulti(s, options)
 
                 return new_addresses
 
@@ -273,6 +293,7 @@ if __name__ == '__main__':
         print('9. Total Bitcoins in wallet')
         print('10. Check Network Fee in Signed Transaction')
         print('11. Generate QR Code for Address')
+        print('12. Get Unspent Addresses and their unspent Bitcoins')
         choice = int(input('Selection: '))
 
         wallet = Wallet(network, datadir)
@@ -283,7 +304,7 @@ if __name__ == '__main__':
 
                 address_valid_map = wallet.validateAddresses()
                 print(address_valid_map)
-        if choice == 2:
+        elif choice == 2:
                 with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
                         wallet.jsonobj = json.load(transfer_file_f)
 
@@ -312,7 +333,8 @@ if __name__ == '__main__':
                 else:
                         print('crypto %s not supported' % wallet.crypto)
                 fee_rate = round(fee_rate, 8)
-#                print('fee_rate = %.8f' % fee_rate)
+                print('fee_rate = %.8f btc/kb' % fee_rate)
+                print('fee_rate = %d sats/bytes' % round(fee_rate * 10**5))
                 wallet.jsonobj['Fee Rate'] = round(fee_rate, 8)
 
                 wallet.createRawTxn(fee_rate)
@@ -332,7 +354,8 @@ if __name__ == '__main__':
 
                 fee_rate = float(input('change fee_rate (%f btc/kb): ' % fee_rate) or '%f' % fee_rate)
                 fee_rate = round(fee_rate, 8)
-#                print('fee_rate = %.8f' % fee_rate)
+                print('fee_rate = %.8f btc/kb' % fee_rate)
+                print('fee_rate = %d sats/bytes' % round(fee_rate * (10**5)))
                 wallet.jsonobj['Fee Rate'] = round(fee_rate, 8)
 
                 wallet.createRawTxnToDivideFunds(fee_rate)
@@ -414,5 +437,11 @@ if __name__ == '__main__':
                         elif choice == 3:
                                 amount = float(input('Enter amount to receive: '))
                                 generate_qrcode('%s:%s?amount=%.8f' % (wallet.crypto, address, amount))
+        elif choice == 12:
+                unspent_list = wallet.rpc_connection.listunspent()
+                print('Unspent Addresses:')
+                for unspent in unspent_list:
+                        if unspent['label'] == wallet.user:
+                                print("%s: %.8f" % (unspent['address'], unspent['amount']))
         else:
                 print('Invalid selection')
