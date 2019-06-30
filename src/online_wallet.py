@@ -80,7 +80,7 @@ class Wallet:
                 user = input('Username: ').lower()
                 self.crypto = crypto_map_g[int(input('Select Crypto(0 => Bitcoin or 1 => Litecoin): '))]
                 self.rpc_port = network_port_map_g[self.crypto][network]
-                self.rpc_connection = AuthServiceProxy("http://%s:%s@127.0.0.1:%d" %(self.rpc_user, self.rpc_password, self.rpc_port), timeout=600)
+                self.rpc_connection = AuthServiceProxy("http://%s:%s@127.0.0.1:%d" %(self.rpc_user, self.rpc_password, self.rpc_port), timeout=10000)
                 self.network = network
                 self.transfer_info_filepath = os.path.join(datadir, '%s.%s.%s.json' % (transfer_info_map_g[network], self.crypto, user))
                 self.user = user
@@ -142,8 +142,11 @@ class Wallet:
                         choice = (input('Scan QR code [Y/n]: ') or 'Y').lower()
                         if choice == 'y':
                                 qrcode = qrutils.scanQRCode()
+                                if ':' in qrcode and qrcode.split(':')[0] != self.crypto:
+                                        print('Address belong to different cryptocurrency i.e. %s' % qrcode.split(':')[0])
+                                        exit()
                                 address = qrcode.split(':')[1].split('?')[0] if ':' in qrcode else qrcode.split('?')[0]
-                                value = float(qrcode.split('?')[1].split('=')[1]) if '?' in qrcode else float(input('Enter Bitcoins: '))
+                                value = float(qrcode.split('?')[1].split('=')[1]) if '?' in qrcode else float(input('Enter Btc/Ltc: '))
                         elif choice == 'n':
                                 address = input('Enter Target Address: ')
                                 value = float(input('Enter Bitcoins: '))
@@ -184,6 +187,9 @@ class Wallet:
                         choice = (input('Scan QR code [Y/n]: ') or 'Y').lower()
                         if choice == 'y':
                                 qrcode = qrutils.scanQRCode()
+                                if ':' in qrcode and qrcode.split(':')[0] != self.crypto:
+                                        print('Address belong to different cryptocurrency i.e. %s' % qrcode.split(':')[0])
+                                        exit()
                                 if '?' in qrcode:
                                         print('QR code should not contain amount. Use option "Create Raw Transaction" instead.')
                                         exit()
@@ -445,11 +451,9 @@ if __name__ == '__main__':
         elif choice == 12:
                 unspent_list = wallet.rpc_connection.listunspent()
                 print('Unspent Addresses:')
-#                print(json.dumps(unspent_list, indent=4, default=decimal_default))
                 address_amount_map = {}
                 for unspent in unspent_list:
                         if unspent['label'] == wallet.user:
-                                print('unspent: %s' % unspent)
                                 if unspent['address'] in address_amount_map:
                                         address_amount_map[unspent['address']] = round(address_amount_map[unspent['address']] + unspent['amount'], 8)
                                 else:
