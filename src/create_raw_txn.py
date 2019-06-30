@@ -163,15 +163,22 @@ class RawTxn:
 
                 inputs = []
                 value = 0
-                for address, address_value in inuse_address_value_map_g.items():
-                        address_inputs = self.getInputsForAddress(address)
-                        value += address_value
-                        inputs.extend(address_inputs)
-
-                        if value >= amount:
+                address_value_map = [{'address': address, 'amount': address_value} for address, address_value in inuse_address_value_map_g.items()]
+                address_value_map = sorted(address_value_map, key = lambda k:k['amount'])
+#                print('sorted address value map = %s' % address_value_map)
+                remaining_amount = amount
+                for address_value in address_value_map:
+                        if address_value['amount'] < remaining_amount:
+                                address_inputs = self.getInputsForAddress(address_value['address'])
+                                inputs.extend(address_inputs)
+                                remaining_amount -= address_value['amount']
+                        else:
+                                address_inputs = self.getInputsForAddress(address_value_map[-1]['address'])
+                                inputs.extend(address_inputs)
+                                remaining_amount -= address_value['amount']
                                 break
 
-                if value < amount:
+                if remaining_amount > 0:
                         print('Error: Insufficient Balance')
                         return None
 
