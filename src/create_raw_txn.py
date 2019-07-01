@@ -152,8 +152,10 @@ class RawTxn:
                 network_client, version = networkinfo['subversion'].split('/')[1].split(':')
                 if network_client == 'BitcoinCore':
                         network = 'bitcoin'
+                        print('Network = bitcoin')
                 elif network_client == 'LitecoinCore':
                         network = litecoin
+                        print('Network = litecoin')
                 else:
                         print('Network client: %s is not supported' % network_client)
                         exit()
