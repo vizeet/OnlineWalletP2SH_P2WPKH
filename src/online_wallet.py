@@ -160,6 +160,10 @@ class Wallet:
 
                         tx_out.append(address_value)
 
+                if len(tx_out) != out_count:
+                        print('Address repetition is not allowed in target')
+                        exit()
+
                 change_address = unused_addresses[0]
                 print('change address: %s' % change_address)
                 return tx_out, change_address
@@ -201,6 +205,10 @@ class Wallet:
                                 exit()
 
                         out_addresses.append(address)
+
+                if len(out_addresses) != out_count:
+                        print('Address repetition is not allowed in target')
+                        exit()
 
 #                print('out_addresses = %s' % out_addresses)
 

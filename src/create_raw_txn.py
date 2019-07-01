@@ -147,6 +147,31 @@ class RawTxn:
                         amount = unspent['amount']
                         self.inuse_address_map[address][txid].append({'vout': vout, 'amount': float(amount)})
 
+        def getNetworkInfo(self):
+                networkinfo = self.rpc_connection.getnetworkinfo()
+                network_client, version = networkinfo['subversion'].split('/')[1].split(':')
+                if network_client == 'BitcoinCore':
+                        network = 'bitcoin'
+                elif network_client == 'LitecoinCore':
+                        network = litecoin
+                else:
+                        print('Network client: %s is not supported' % network_client)
+                        exit()
+                return network, version
+
+        def checkAddressIsReused(address: str, network):
+                if network == 'bitcoin':
+                        res = requests.get('https://blockchain.info/rawaddr/' + address)
+                        jsonobj = json.loads(res.text)
+                        return (jsonobj['total_sent'] != 0)
+                elif network == 'litecoin':
+                        res = requests.get('https://chain.so/api/v2/address/LTC/' + address)
+                        jsonobj = json.loads(res.text)
+                        return (jsonobj['data']['received_value'] != jsonobj['data']['balance'])
+                else:
+                        print('Network client: %s is not supported' % network_client)
+                        exit()
+
         def getInputs(self, amount: float):
                 global inuse_address_value_map_g
 
@@ -164,25 +189,37 @@ class RawTxn:
                 inputs = []
                 value = 0
                 address_value_map = [{'address': address, 'amount': address_value} for address, address_value in inuse_address_value_map_g.items()]
-                address_value_map = sorted(address_value_map, key = lambda k:k['amount'])
-#                print('sorted address value map = %s' % address_value_map)
-                remaining_amount = amount
+                network, _ = self.getNetworkInfo()
+
+                allocated_address_value = []
                 for address_value in address_value_map:
-                        if address_value['amount'] < remaining_amount:
+                        if checkAddressIsReused(address, network) == True:
+                                allocated_address_value.append(address_value)
+                                amount = amount - address_value['amount']
                                 address_inputs = self.getInputsForAddress(address_value['address'])
                                 inputs.extend(address_inputs)
-                                remaining_amount -= address_value['amount']
-                        else:
-                                address_inputs = self.getInputsForAddress(address_value_map[-1]['address'])
-                                inputs.extend(address_inputs)
-                                remaining_amount -= address_value['amount']
-                                break
 
-                if remaining_amount > 0:
-                        print('Error: Insufficient Balance')
-                        return None
+                address_value_map = address_value_map - allocated_address_value
+                address_value_map = sorted(address_value_map, key = lambda k:k['amount'])
+                print('sorted address value map = %s' % address_value_map)
+                if amount > 0:
+                        remaining_amount = amount
+                        for address_value in address_value_map:
+                                if address_value['amount'] < remaining_amount:
+                                        address_inputs = self.getInputsForAddress(address_value['address'])
+                                        inputs.extend(address_inputs)
+                                        remaining_amount -= address_value['amount']
+                                else:
+                                        address_inputs = self.getInputsForAddress(address_value_map[-1]['address'])
+                                        inputs.extend(address_inputs)
+                                        remaining_amount -= address_value['amount']
+                                        break
 
-#                print('inputs = %s' % inputs)
+                        if remaining_amount > 0:
+                                print('Error: Insufficient Balance')
+                                return None
+
+                print('inputs = %s' % inputs)
                 return inputs
 
         def getInputsForAddressList(self, address_list: list):
