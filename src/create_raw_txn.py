@@ -213,7 +213,7 @@ class RawTxn:
                 for allocated_address_value in allocated_address_value_map:
                         address_value_map.remove(allocated_address_value)
                 address_value_map = sorted(address_value_map, key = lambda k:k['amount'])
-                print('sorted address value map = %s' % address_value_map)
+#                print('sorted address value map = %s' % address_value_map)
                 if amount > 0:
                         remaining_amount = amount
                         for address_value in address_value_map:
@@ -231,7 +231,7 @@ class RawTxn:
                                 print('Error: Insufficient Balance')
                                 return None
 
-                print('inputs = %s' % inputs)
+#                print('inputs = %s' % inputs)
                 return inputs
 
         def getInputsForAddressList(self, address_list: list):
