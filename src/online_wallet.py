@@ -34,7 +34,7 @@ from functools import reduce
 import pyqrcode
 import tkinter
 import os
-from utility_adapters import qrutils
+#from utility_adapters import qrutils
 
 def decimal_default(obj):
     if isinstance(obj, decimal.Decimal):
@@ -87,9 +87,11 @@ class Wallet:
 
         def isAddressUnused(self, address: str):
                 if self.crypto == 'bitcoin':
-                        res = requests.get('https://blockchain.info/rawaddr/' + address)
-                        jsonobj = json.loads(res.text)
-                        return (jsonobj['total_received'] == 0)
+                        res = requests.get('https://blockchain.info/q/getreceivedbyaddress/' + address)
+                        return (int(res.text) == 0)
+#                        res = requests.get('https://blockchain.info/rawaddr/' + address)
+#                        jsonobj = json.loads(res.text)
+#                        return (jsonobj['total_received'] == 0)
 
                 if self.crypto == 'litecoin':
                         res = requests.get('https://chain.so/api/v2/address/LTC/' + address)
@@ -137,8 +139,8 @@ class Wallet:
 #
 #                unused_addresses = copy(self.unused_list)
 #
+#                tx_out = {}
 #                for i in range(out_count):
-#                        address_value = {}
 #                        choice = (input('Scan QR code [Y/n]: ') or 'Y').lower()
 #                        if choice == 'y':
 #                                qrcode = qrutils.scanQRCode()
@@ -153,14 +155,12 @@ class Wallet:
 #                        else:
 #                                print('Invalid entry')
 #                                exit()
-#                        address_value[address] = value
+#                        tx_out[address] = value
 #
 #                        if address in unused_addresses:
 #                                unused_addresses.remove(address)
 #
-#                        tx_out.append(address_value)
-#
-#                if len(set(tx_out)) != out_count:
+#                if len(tx_out) != out_count:
 #                        print('Address repetition is not allowed in target')
 #                        exit()
 #
@@ -168,92 +168,51 @@ class Wallet:
 #                print('change address: %s' % change_address)
 #                return tx_out, change_address
 
-        def getTargetAddresses(self):
-                if network == 'regtest':
-                        self.setUnusedAddressesTest()
-                else:
-                        self.setUnusedAddresses()
-
-                out_count = int(input('Enter Number of Target Addresses: '))
-
-                tx_out = []
-
-                unused_addresses = copy(self.unused_list)
-
-                tx_out = {}
-                for i in range(out_count):
-                        choice = (input('Scan QR code [Y/n]: ') or 'Y').lower()
-                        if choice == 'y':
-                                qrcode = qrutils.scanQRCode()
-                                if ':' in qrcode and qrcode.split(':')[0] != self.crypto:
-                                        print('Address belong to different cryptocurrency i.e. %s' % qrcode.split(':')[0])
-                                        exit()
-                                address = qrcode.split(':')[1].split('?')[0] if ':' in qrcode else qrcode.split('?')[0]
-                                value = float(qrcode.split('?')[1].split('=')[1]) if '?' in qrcode else float(input('Enter Btc/Ltc: '))
-                        elif choice == 'n':
-                                address = input('Enter Target Address: ')
-                                value = float(input('Enter Bitcoins: '))
-                        else:
-                                print('Invalid entry')
-                                exit()
-                        tx_out[address] = value
-
-                        if address in unused_addresses:
-                                unused_addresses.remove(address)
-
-                if len(tx_out) != out_count:
-                        print('Address repetition is not allowed in target')
-                        exit()
-
-                change_address = unused_addresses[0]
-                print('change address: %s' % change_address)
-                return tx_out, change_address
-
-        def getSourceTargetAddresses(self):
-                if network == 'regtest':
-                        self.setUnusedAddressesTest()
-                else:
-                        self.setUnusedAddresses()
-
-                out_count = int(input('Enter Number of Input Addresses: '))
-
-                input_addresses = []
-
-                for i in range(out_count):
-                        address = input('Enter Input Address: ')
-
-                        input_addresses.append(address)
-
-                out_count = int(input('Enter Number of Target Addresses: '))
-
-                out_addresses = []
-
-                for i in range(out_count):
-                        choice = (input('Scan QR code [Y/n]: ') or 'Y').lower()
-                        if choice == 'y':
-                                qrcode = qrutils.scanQRCode()
-                                if ':' in qrcode and qrcode.split(':')[0] != self.crypto:
-                                        print('Address belong to different cryptocurrency i.e. %s' % qrcode.split(':')[0])
-                                        exit()
-                                if '?' in qrcode:
-                                        print('QR code should not contain amount. Use option "Create Raw Transaction" instead.')
-                                        exit()
-                                address = qrcode.split(':')[1] if ':' in qrcode else qrcode
-                        elif choice == 'n':
-                                address = input('Enter Target Address: ')
-                        else:
-                                print('Invalid entry')
-                                exit()
-
-                        out_addresses.append(address)
-
-                if len(set(out_addresses)) != out_count:
-                        print('Address repetition is not allowed in target')
-                        exit()
-
-#                print('out_addresses = %s' % out_addresses)
-
-                return input_addresses, out_addresses
+#        def getSourceTargetAddresses(self):
+#                if network == 'regtest':
+#                        self.setUnusedAddressesTest()
+#                else:
+#                        self.setUnusedAddresses()
+#
+#                out_count = int(input('Enter Number of Input Addresses: '))
+#
+#                input_addresses = []
+#
+#                for i in range(out_count):
+#                        address = input('Enter Input Address: ')
+#
+#                        input_addresses.append(address)
+#
+#                out_count = int(input('Enter Number of Target Addresses: '))
+#
+#                out_addresses = []
+#
+#                for i in range(out_count):
+#                        choice = (input('Scan QR code [Y/n]: ') or 'Y').lower()
+#                        if choice == 'y':
+#                                qrcode = qrutils.scanQRCode()
+#                                if ':' in qrcode and qrcode.split(':')[0] != self.crypto:
+#                                        print('Address belong to different cryptocurrency i.e. %s' % qrcode.split(':')[0])
+#                                        exit()
+#                                if '?' in qrcode:
+#                                        print('QR code should not contain amount. Use option "Create Raw Transaction" instead.')
+#                                        exit()
+#                                address = qrcode.split(':')[1] if ':' in qrcode else qrcode
+#                        elif choice == 'n':
+#                                address = input('Enter Target Address: ')
+#                        else:
+#                                print('Invalid entry')
+#                                exit()
+#
+#                        out_addresses.append(address)
+#
+#                if len(set(out_addresses)) != out_count:
+#                        print('Address repetition is not allowed in target')
+#                        exit()
+#
+##                print('out_addresses = %s' % out_addresses)
+#
+#                return input_addresses, out_addresses
 
         def validateAddresses(self):
                 address_valid_map = {}
@@ -279,6 +238,7 @@ class Wallet:
                 s = []
                 for address in new_addresses:
                         i = {'scriptPubKey': {'address': address}, 'timestamp': 0, 'label': self.user, 'watchonly': True}
+                        print(i)
                         s.append(i)
 
                 options = {'rescan': False}

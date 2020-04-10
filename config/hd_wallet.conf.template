@@ -1,4 +1,0 @@
-{
-        "network": "mainnet|testnet|regtest",
-        "datadir": <datadir path>
-}
