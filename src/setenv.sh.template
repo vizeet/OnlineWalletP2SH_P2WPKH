@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+export BLOCKS_PATH=/run/media/vizeet/bitcoin/blocks/
+export BITCOIN_HOME=~/.bitcoin
+export CHAINSTATE_DB=$BITCOIN_HOME/chainstate
+export BLOCK_INDEX_DB=$BITCOIN_HOME/blocks/index

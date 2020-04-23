@@ -3,3 +3,4 @@ PyQRCode==1.2.1
 opecv-python==4.1.0.25
 pyzbar==0.1.8
 numpy==1.16.4
+plyvel==1.2.0

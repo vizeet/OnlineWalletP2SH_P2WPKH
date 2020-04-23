@@ -34,7 +34,10 @@ from functools import reduce
 import pyqrcode
 import tkinter
 import os
-#from utility_adapters import qrutils
+from traverse_block_indexes import create_update_used_p2sh_address_list
+from utility_adapters import qrutils
+import pickle
+import glob
 
 def decimal_default(obj):
     if isinstance(obj, decimal.Decimal):
@@ -62,14 +65,18 @@ transfer_info_map_g = {
 crypto_map_g = ['bitcoin', 'litecoin']
 
 def generate_qrcode(message: str):
-        code = pyqrcode.create(message)
-        code_xbm = code.xbm(scale=5)
-        top = tkinter.Tk()
-        code_bmp = tkinter.BitmapImage(data=code_xbm)
-        code_bmp.config(background="white")
-        label = tkinter.Label(top, image=code_bmp)
-        label.pack()
-        top.mainloop()
+    code = pyqrcode.create(message)
+    code_xbm = code.xbm(scale=5)
+    top = tkinter.Tk()
+    code_bmp = tkinter.BitmapImage(data=code_xbm)
+    code_bmp.config(background="white")
+    label = tkinter.Label(top, image=code_bmp)
+    label.pack()
+    top.mainloop()
+
+def get_address_set_filelist():
+    filelist = [f for f in glob.glob("address_*.set", recursive=False)]
+    return filelist
 
 class Wallet:
         def __init__(self, network: str, datadir: str):
@@ -85,21 +92,14 @@ class Wallet:
                 self.transfer_info_filepath = os.path.join(datadir, '%s.%s.%s.json' % (transfer_info_map_g[network], self.crypto, user))
                 self.user = user
 
-        def isAddressUnused(self, address: str):
-                if self.crypto == 'bitcoin':
-                        res = requests.get('https://blockchain.info/q/getreceivedbyaddress/' + address)
-                        return (int(res.text) == 0)
-#                        res = requests.get('https://blockchain.info/rawaddr/' + address)
-#                        jsonobj = json.loads(res.text)
-#                        return (jsonobj['total_received'] == 0)
-
-                if self.crypto == 'litecoin':
-                        res = requests.get('https://chain.so/api/v2/address/LTC/' + address)
-                        jsonobj = json.loads(res.text)
-                        return (jsonobj['data']['total_txs'] == 0)
-
         def setUnusedAddresses(self):
-                self.unused_list = [address for address in self.jsonobj['Addresses'] if self.isAddressUnused(address) == True]
+            flist = get_address_set_filelist()
+            used_address_set_union = set()
+            for fname in flist:
+                with open(fname, 'rb') as address_set_f:
+                    used_address_set = pickle.load(address_set_f)
+                    used_address_set_union = used_address_set_union.union(set(self.jsonobj['Addresses']).intersection(used_address_set))
+            self.unused_list = list(set(self.jsonobj['Addresses']) - used_address_set_union)
 
         def setUnusedAddressesTest(self):
                 unspent_list = self.rpc_connection.listunspent()
@@ -114,8 +114,6 @@ class Wallet:
                 else:
                         self.unused_list = copy(self.jsonobj['Addresses'])
 
-#                print('unused list = %s' % self.unused_list)
-
         def getNextAddresses(self):
                 if network == 'regtest':
                         self.setUnusedAddressesTest()
@@ -127,92 +125,76 @@ class Wallet:
 
                 return addresses
 
-#        def getTargetAddresses(self):
-#                if network == 'regtest':
-#                        self.setUnusedAddressesTest()
-#                else:
-#                        self.setUnusedAddresses()
-#
-#                out_count = int(input('Enter Number of Target Addresses: '))
-#
-#                tx_out = []
-#
-#                unused_addresses = copy(self.unused_list)
-#
-#                tx_out = {}
-#                for i in range(out_count):
-#                        choice = (input('Scan QR code [Y/n]: ') or 'Y').lower()
-#                        if choice == 'y':
-#                                qrcode = qrutils.scanQRCode()
-#                                if ':' in qrcode and qrcode.split(':')[0] != self.crypto:
-#                                        print('Address belong to different cryptocurrency i.e. %s' % qrcode.split(':')[0])
-#                                        exit()
-#                                address = qrcode.split(':')[1].split('?')[0] if ':' in qrcode else qrcode.split('?')[0]
-#                                value = float(qrcode.split('?')[1].split('=')[1]) if '?' in qrcode else float(input('Enter Btc/Ltc: '))
-#                        elif choice == 'n':
-#                                address = input('Enter Target Address: ')
-#                                value = float(input('Enter Bitcoins: '))
-#                        else:
-#                                print('Invalid entry')
-#                                exit()
-#                        tx_out[address] = value
-#
-#                        if address in unused_addresses:
-#                                unused_addresses.remove(address)
-#
-#                if len(tx_out) != out_count:
-#                        print('Address repetition is not allowed in target')
-#                        exit()
-#
-#                change_address = unused_addresses[0]
-#                print('change address: %s' % change_address)
-#                return tx_out, change_address
+        def getTargetAddresses(self):
+                out_count = int(input('Enter Number of Target Addresses: '))
 
-#        def getSourceTargetAddresses(self):
-#                if network == 'regtest':
-#                        self.setUnusedAddressesTest()
-#                else:
-#                        self.setUnusedAddresses()
-#
-#                out_count = int(input('Enter Number of Input Addresses: '))
-#
-#                input_addresses = []
-#
-#                for i in range(out_count):
-#                        address = input('Enter Input Address: ')
-#
-#                        input_addresses.append(address)
-#
-#                out_count = int(input('Enter Number of Target Addresses: '))
-#
-#                out_addresses = []
-#
-#                for i in range(out_count):
-#                        choice = (input('Scan QR code [Y/n]: ') or 'Y').lower()
-#                        if choice == 'y':
-#                                qrcode = qrutils.scanQRCode()
-#                                if ':' in qrcode and qrcode.split(':')[0] != self.crypto:
-#                                        print('Address belong to different cryptocurrency i.e. %s' % qrcode.split(':')[0])
-#                                        exit()
-#                                if '?' in qrcode:
-#                                        print('QR code should not contain amount. Use option "Create Raw Transaction" instead.')
-#                                        exit()
-#                                address = qrcode.split(':')[1] if ':' in qrcode else qrcode
-#                        elif choice == 'n':
-#                                address = input('Enter Target Address: ')
-#                        else:
-#                                print('Invalid entry')
-#                                exit()
-#
-#                        out_addresses.append(address)
-#
-#                if len(set(out_addresses)) != out_count:
-#                        print('Address repetition is not allowed in target')
-#                        exit()
-#
-##                print('out_addresses = %s' % out_addresses)
-#
-#                return input_addresses, out_addresses
+                tx_out = {}
+                for i in range(out_count):
+                        choice = (input('Scan QR code [Y/n]: ') or 'Y').lower()
+                        if choice == 'y':
+                                qrcode = qrutils.scanQRCode()
+                                if ':' in qrcode and qrcode.split(':')[0] != self.crypto:
+                                        print('Address belong to different cryptocurrency i.e. %s' % qrcode.split(':')[0])
+                                        exit()
+                                address = qrcode.split(':')[1].split('?')[0] if ':' in qrcode else qrcode.split('?')[0]
+                                value = float(qrcode.split('?')[1].split('=')[1]) if '?' in qrcode else float(input('Enter Btc/Ltc: '))
+                        elif choice == 'n':
+                                address = input('Enter Target Address: ')
+                                value = float(input('Enter Bitcoins: '))
+                        else:
+                                print('Invalid entry')
+                                exit()
+                        tx_out[address] = value
+
+                if len(tx_out) != out_count:
+                        print('Address repetition is not allowed in target')
+                        exit()
+
+                change_address = input('Enter Change Address: ')
+
+                return tx_out, change_address
+
+        def getSourceTargetAddresses(self):
+
+                out_count = int(input('Enter Number of Input Addresses: '))
+
+                input_addresses = []
+
+                for i in range(out_count):
+                        address = input('Enter Input Address: ')
+
+                        input_addresses.append(address)
+
+                out_count = int(input('Enter Number of Target Addresses: '))
+
+                out_addresses = []
+
+                for i in range(out_count):
+                        choice = (input('Scan QR code [Y/n]: ') or 'Y').lower()
+                        if choice == 'y':
+                                qrcode = qrutils.scanQRCode()
+                                if ':' in qrcode and qrcode.split(':')[0] != self.crypto:
+                                        print('Address belong to different cryptocurrency i.e. %s' % qrcode.split(':')[0])
+                                        exit()
+                                if '?' in qrcode:
+                                        print('QR code should not contain amount. Use option "Create Raw Transaction" instead.')
+                                        exit()
+                                address = qrcode.split(':')[1] if ':' in qrcode else qrcode
+                        elif choice == 'n':
+                                address = input('Enter Target Address: ')
+                        else:
+                                print('Invalid entry')
+                                exit()
+
+                        out_addresses.append(address)
+
+                if len(set(out_addresses)) != out_count:
+                        print('Address repetition is not allowed in target')
+                        exit()
+
+#                print('out_addresses = %s' % out_addresses)
+
+                return input_addresses, out_addresses
 
         def validateAddresses(self):
                 address_valid_map = {}
@@ -276,6 +258,9 @@ class Wallet:
         def decodeSignedTransaction(self):
                 return self.rpc_connection.decoderawtransaction(self.jsonobj['Signed Txn'])
 
+        def validateSignedTransaction(self):
+                return self.rpc_connection.testmempoolaccept(self.jsonobj['Signed Txn'])
+
 if __name__ == '__main__':
         parser = OptionParser()
         parser.add_option("-t", "--test",
@@ -293,27 +278,23 @@ if __name__ == '__main__':
                 network = jsonobj['network']
                 datadir = jsonobj['datadir']
 
-#        if options.test:
-#                network = 'regtest'
-#                datadir = '/home/online/wallet'
-#        else:
-#                with open('../config/hd_wallet.conf', 'rt') as conf_f:
-#                        jsonobj = json.load(conf_f)
-#                network = jsonobj['network']
-#                datadir = jsonobj['datadir']
-#
+        input('Please stop bitcoind and press <Enter>')
+        create_update_used_p2sh_address_list()
+        input('Please start bitcoind and press <Enter>')
+
         print('1. Validate Addresses')
         print('2. Register Addresses')
         print('3. Get Next Addresses')
         print('4. Create Raw Transaction')
         print('5. Create Raw Transaction to Divide Funds')
         print('6. Decode Signed Transaction')
-        print('7. Publish Signed Transaction')
-        print('8. Rescan Blockchain to include missed transactions')
-        print('9. Total Bitcoins in wallet')
-        print('10. Check Network Fee in Signed Transaction')
-        print('11. Generate QR Code for Address')
-        print('12. Get Unspent Addresses and their unspent Bitcoins')
+        print('7. Validate Signed Transaction')
+        print('8. Publish Signed Transaction')
+        print('9. Rescan Blockchain to include missed transactions')
+        print('10. Total Bitcoins in wallet')
+        print('11. Check Network Fee in Signed Transaction')
+        print('12. Generate QR Code for Address')
+        print('13. Get Unspent Addresses and their unspent Bitcoins')
         choice = int(input('Selection: '))
 
         wallet = Wallet(network, datadir)
@@ -393,9 +374,15 @@ if __name__ == '__main__':
                 with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
                         wallet.jsonobj = json.load(transfer_file_f)
 
+                retjson = wallet.validateSignedTransaction()
+                print(retjson)
+        elif choice == 8:
+                with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
+                        wallet.jsonobj = json.load(transfer_file_f)
+
                 status = wallet.publishSignedTxn()
                 print(status)
-        elif choice == 8:
+        elif choice == 9:
                 rescan_block_index = int(input('Rescan Block Index (1): ') or '1')
 #                print('rescan_block_index = %d' % rescan_block_index)
 
@@ -405,11 +392,11 @@ if __name__ == '__main__':
                 wallet.registerAddresses(wallet.jsonobj['Addresses'])
 
                 wallet.rpc_connection.rescanblockchain(rescan_block_index)
-        elif choice == 9:
+        elif choice == 10:
                 unspent_list = wallet.rpc_connection.listunspent()
                 amount = reduce(lambda x, y: round(x, 8) + round(y, 8), [unspent['amount'] for unspent in unspent_list if unspent['label'] == wallet.user])
                 print('Total amount in wallet = %.8f' % round(amount, 8))
-        elif choice == 10:
+        elif choice == 11:
                 unspent_list = wallet.rpc_connection.listunspent()
                 #print('unspent list = %s' % unspent_list)
                 with open(wallet.transfer_info_filepath, 'rt') as transfer_file_f:
@@ -441,7 +428,7 @@ if __name__ == '__main__':
 
                 diff_network_fee = abs(network_fee_actual - network_fee_calculated)
                 print('Difference between Actual and Calculated Network Fee = %.8f' % round(diff_network_fee, 8))
-        elif choice == 11:
+        elif choice == 12:
                 address = input('Enter Address: ')
                 if wallet.rpc_connection.validateaddress(address)['isvalid'] == False:
                         print('Address is invalid')
@@ -457,7 +444,7 @@ if __name__ == '__main__':
                         elif choice == 3:
                                 amount = float(input('Enter amount to receive: '))
                                 generate_qrcode('%s:%s?amount=%.8f' % (wallet.crypto, address, amount))
-        elif choice == 12:
+        elif choice == 13:
                 unspent_list = wallet.rpc_connection.listunspent()
                 print('Unspent Addresses:')
                 address_amount_map = {}
